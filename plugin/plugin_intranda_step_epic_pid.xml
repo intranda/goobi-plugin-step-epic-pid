@@ -12,10 +12,19 @@
         <project>*</project>
         <step>*</step>
         
-        <!-- sample parameter -->
-        <value>test</value>
-        <!-- display button to finish the task directly from within the entered plugin -->
-        <allowTaskFinishButtons>true</allowTaskFinishButtons>
+		<PEMFile>/opt/digiverso/goobi/config/certificate.pem</PEMFile>
+		<UserHandle>USER</UserHandle> 
+        <HandleBase>BASE</HandleBase> 
+        <URLPrefix>https://viewer.goobi.io/idresolver?handle=</URLPrefix> 
+    		
+		<HandleIdPrefix>goobi</HandleIdPrefix>
+		<HandleInstitutionAbbr>go</HandleInstitutionAbbr>
+		<ErrorMessage>Handle Authorization file could not be found.</ErrorMessage>
+		
+		<!-- configuration for DOIs -->
+		<MakeDOI>true</MakeDOI>
+		<DOIInstitutionAbbr>GOO</DOIInstitutionAbbr>
+		<DOIMappingFile>/opt/digiverso/goobi/config/plugin_intranda_step_epic_pid_mapping.xml</DOIMappingFile>
     </config>
 
 </config_plugin>

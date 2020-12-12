@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Mapping>
+	<!-- Mandatory fields: -->
+	<map>
+		<doiElt>title</doiElt>
+		<localElt>TitleDocMain</localElt>
+		<altLocalElt>titel</altLocalElt>
+		<default>Fragment</default>
+	</map>
+
+	<map>
+		<doiElt>author</doiElt>
+		<localElt>Author</localElt>
+		<default>MPG</default>
+	</map>
+
+	<map>
+		<doiElt>publisher</doiElt>
+		<localElt>Publisher</localElt>
+		<altLocalElt>quelle</altLocalElt>
+		<default>MPG</default>
+	</map>
+
+	<map>
+		<doiElt>pubdate</doiElt>
+		<localElt>PublicationYear</localElt>
+		<altLocalElt>PublicationYearSort</altLocalElt>
+		<altLocalElt>Sortlaufzeit0</altLocalElt>
+		<default>unknown</default>
+	</map>
+
+	<map>
+		<doiElt>inst</doiElt>
+		<default>MPG</default>
+	</map>
+</Mapping>
