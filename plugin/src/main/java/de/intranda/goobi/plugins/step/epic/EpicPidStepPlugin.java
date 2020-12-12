@@ -218,7 +218,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
             log.error(e.getMessage(), e);
         }
 
-        log.info("EpicPid step plugin executed");
+        log.info("Epic Pid step plugin executed");
         if (!successfull) {
             return PluginReturnValue.ERROR;
         }
