@@ -61,19 +61,19 @@ public class MakeDOI {
         this.doiMappings = new HashMap<String, Element>();
         Element rootNode = mapping.getRootElement();
         for (Element elt : rootNode.getChildren()) {
-            doiMappings.put(elt.getChildText("doiElt"), elt);
+            doiMappings.put(elt.getChildText("field"), elt);
         }
     }
 
     /**
      * Given the root elt of the xml file which we are examining, find the text of the entry correspoinding to the DOI element specified
      * 
-     * @param strDoiElt
+     * @param field
      * @param root
      * @return
      */
-    public List<String> getValues(String strDoiElt, Element root) {
-        Element eltMap = doiMappings.get(strDoiElt);
+    public List<String> getValues(String field, Element root) {
+        Element eltMap = doiMappings.get(field);
         if (eltMap == null) {
             return null;
         }
@@ -87,21 +87,21 @@ public class MakeDOI {
         }
 
         //try to find the local value:
-        String strLocalElt = eltMap.getChildText("localElt");
+        String metadata = eltMap.getChildText("metadata");
 
         //no local value set? then return default:
-        if (strLocalElt.isEmpty()) {
+        if (metadata.isEmpty()) {
             return lstDefault;
         }
 
         //otherwise
-        List<String> lstLocalValues = getValueRecursive(root, strLocalElt);
+        List<String> lstLocalValues = getValueRecursive(root, metadata);
         if (!lstLocalValues.isEmpty()) {
             return lstLocalValues;
         }
 
         //could not find first choice? then try alternatives
-        for (Element eltAlt : eltMap.getChildren("altLocalElt")) {
+        for (Element eltAlt : eltMap.getChildren("altMetadata")) {
             lstLocalValues = getValueRecursive(root, eltAlt.getText());
             if (!lstLocalValues.isEmpty()) {
                 return lstLocalValues;
@@ -113,24 +113,24 @@ public class MakeDOI {
     }
 
     /**
-     * Find all child elements with the specified name, and return a list of all their values. Not ethis will STOP at the first level at which it
-     * finds a hit: if there are "title" elements at level 2 it will return all of them, and will NOT continue ti look for "title" elts at lower
+     * Find all child elements with the specified name, and return a list of all their values. Note this will STOP at the first level at which it
+     * finds a hit: if there are "title" elements at level 2 it will return all of them, and will NOT continue if look for "title" elts at lower
      * levels.
      * 
      * @param root
-     * @param strLocalElt
+     * @param metadata
      * @return
      */
-    private List<String> getValueRecursive(Element root, String strLocalElt) {
+    private List<String> getValueRecursive(Element root, String metadata) {
         ArrayList<String> lstValues = new ArrayList<String>();
         //if we find the correct named element, do NOT include its children in the search:
-        if (root.getName() == strLocalElt) {
+        if (root.getName() == metadata) {
             lstValues.add(root.getText());
             return lstValues;
         }
         //recursive:
         for (Element eltChild : root.getChildren()) {
-            lstValues.addAll(getValueRecursive(eltChild, strLocalElt));
+            lstValues.addAll(getValueRecursive(eltChild, metadata));
         }
         return lstValues;
     }
@@ -255,10 +255,10 @@ public class MakeDOI {
     /**
      * TODO: Please document this method
      */
-    private List<String> getValues(String strDoiElt, DocStruct struct) {
+    private List<String> getValues(String field, DocStruct struct) {
         ArrayList<String> lstDefault = new ArrayList<String>();
-        String strLocalElt = strDoiElt;
-        Element eltMap = doiMappings.get(strDoiElt);
+        String metadata = field;
+        Element eltMap = doiMappings.get(field);
         if (eltMap != null) {
             //set up the default value:
             String strDefault = eltMap.getChildText("default");
@@ -266,18 +266,18 @@ public class MakeDOI {
                 lstDefault.add(strDefault);
             }
             //try to find the local value:
-            strLocalElt = eltMap.getChildText("localElt");
+            metadata = eltMap.getChildText("metadata");
         }
 
-        List<String> lstLocalValues = getValuesForField(struct, strLocalElt);
+        List<String> lstLocalValues = getMetedtaFromMets(struct, metadata);
         if (!lstLocalValues.isEmpty()) {
             return lstLocalValues;
         }
 
         if (eltMap != null) {
             //could not find first choice? then try alternatives
-            for (Element eltAlt : eltMap.getChildren("altLocalElt")) {
-                lstLocalValues = getValuesForField(struct, eltAlt.getText());
+            for (Element eltAlt : eltMap.getChildren("altMetadata")) {
+                lstLocalValues = getMetedtaFromMets(struct, eltAlt.getText());
                 if (!lstLocalValues.isEmpty()) {
                     return lstLocalValues;
                 }
@@ -291,10 +291,10 @@ public class MakeDOI {
     /**
      * TODO: Please document this method
      */
-    private List<String> getValuesForField(DocStruct struct, String strLocalElt) {
+    private List<String> getMetedtaFromMets(DocStruct struct, String name) {
         ArrayList<String> lstValues = new ArrayList<String>();
         for (Metadata mdata : struct.getAllMetadata()) {
-            if (mdata.getType().getName().equalsIgnoreCase(strLocalElt)) {
+            if (mdata.getType().getName().equalsIgnoreCase(name)) {
                 lstValues.add(mdata.getValue());
             }
         }

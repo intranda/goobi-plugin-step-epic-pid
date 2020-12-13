@@ -71,7 +71,7 @@ public class EpicPidPluginTest {
         plug.addHandle(physical, strId, true);
 
         //            //Add DOI?
-        //            if (plug.config.getBoolean("MakeDOI")) {
+        //            if (plug.config.getBoolean("doiGenerate")) {
         //
         //                plug.addDOI(logical, strLogicalHandle);
         //            }

@@ -115,17 +115,18 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
             if (strHandle == null) {
                 //if not, make one.
                 if (boMakeDOI) {
-                    handler.setDOIMappingFile(config.getString("DOIMappingFile", null));
+                    handler.setDOIMappingFile(config.getString("doiMapping", null));
                 }
 
-                String client = config.getString("HandleInstitutionAbbr");
-                String strIdPrefix = config.getString("HandleIdPrefix");
+                String name = config.getString("name");
+                String prefix = config.getString("prefix");
+                String separator = config.getString("separator", "-");
                 String strPostfix = "";
-                if (strIdPrefix != null && !strIdPrefix.isEmpty()) {
-                    strPostfix = strIdPrefix + "-";
+                if (prefix != null && !prefix.isEmpty()) {
+                    strPostfix = prefix + separator;
                 }
-                if (client != null && !client.isEmpty()) {
-                    strPostfix = strPostfix + client + "-";
+                if (name != null && !name.isEmpty()) {
+                    strPostfix += name + separator;
                 }
                 strHandle = handler.makeURLHandleForObject(strId, strPostfix, boMakeDOI, docstruct);
                 setHandle(docstruct, strHandle);
@@ -208,7 +209,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
             String strId = getId(logical);
 
             //add handles to each physical and logical element
-            Boolean boMakeDOI = config.getBoolean("MakeDOI");
+            Boolean boMakeDOI = config.getBoolean("doiGenerate", false);
             String strLogicalHandle = addHandle(logical, strId, boMakeDOI);
             String strPhysicalHandle = addHandle(physical, strId, false);
 

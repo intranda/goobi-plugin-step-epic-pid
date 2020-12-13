@@ -43,10 +43,11 @@ import ugh.dl.DocStruct;
 public class HandleClient {
 
     //static fields
-    private String strPathPrivatePEM;
-    private String strUserHandle = "21.T11998/USER28";
-    private String strHandleBase = "21.T11998";
-    private String strURLPrefix = "https://viewer.goobi.io/idresolver?handle=";
+    private String certificate;
+    private String user;
+    private String base;
+    private String prefix;
+    private String separator;
     private static int ADMIN_INDEX = 300; //NOT 28!
     private static int ADMIN_RECORD_INDEX = 100;
     private static int URL_RECORD_INDEX = 1;
@@ -67,12 +68,13 @@ public class HandleClient {
      * TODO: Please document this method
      */
     public HandleClient(SubnodeConfiguration config) throws HandleException, IOException {
-        this.strUserHandle = config.getString("UserHandle");
-        this.strHandleBase = config.getString("HandleBase");
-        this.strURLPrefix = config.getString("URLPrefix");
-        this.strPathPrivatePEM = config.getString("PEMFile");
+        this.user = config.getString("user");
+        this.base = config.getString("base");
+        this.prefix = config.getString("url");
+        this.separator = config.getString("separator");
+        this.certificate = config.getString("certificate");
         this.privKey = getPemPrivateKey();
-        this.authInfo = new PublicKeyAuthenticationInfo(Util.encodeString(strUserHandle), ADMIN_INDEX, privKey);
+        this.authInfo = new PublicKeyAuthenticationInfo(Util.encodeString(user), ADMIN_INDEX, privKey);
     }
 
     /**
@@ -91,7 +93,7 @@ public class HandleClient {
             }
         }
 
-        String strNewHandle = newURLHandle(strHandleBase + "/" + strPostfix + strObjectId, strURLPrefix, true, boMakeDOI, basicDOI);
+        String strNewHandle = newURLHandle(base + "/" + strPostfix + strObjectId, prefix, separator, true, boMakeDOI, basicDOI);
         String strNewURL = getURLForHandle(strNewHandle);
         if (changleHandleURL(strNewHandle, strNewURL)) {
             return strNewHandle;
@@ -106,7 +108,7 @@ public class HandleClient {
      * 
      * TODO: Please document this method
      */
-    public String newURLHandle(String strNewHandle, String url, Boolean boMintNewSuffix, Boolean boMakeDOI, BasicDoi basicDOI)
+    public String newURLHandle(String strNewHandle, String url, String separator, Boolean boMintNewSuffix, Boolean boMakeDOI, BasicDoi basicDOI)
             throws HandleException {
 
         if (!boMintNewSuffix && isHandleRegistered(strNewHandle)) {
@@ -119,7 +121,7 @@ public class HandleClient {
             int iCount = 0;
             String strTestHandle = strNewHandle;
             while (isHandleRegistered(strTestHandle)) {
-                strTestHandle = strNewHandle + "-" + iCount;
+                strTestHandle = strNewHandle + separator + iCount;
                 iCount++;
                 if (iCount > 1000) {
                     throw new HandleException(HandleException.INTERNAL_ERROR, "Registry query always returning true: " + strNewHandle);
@@ -131,7 +133,7 @@ public class HandleClient {
         }
 
         // Define the admin record for the handle we want to create
-        AdminRecord admin = createAdminRecord(strUserHandle, ADMIN_INDEX);
+        AdminRecord admin = createAdminRecord(user, ADMIN_INDEX);
 
         // Make a create-handle request.
         HandleValue values[] = { new HandleValue(ADMIN_RECORD_INDEX, // unique index
@@ -170,7 +172,7 @@ public class HandleClient {
     }
 
     private String getURLForHandle(String strHandle) {
-        return strURLPrefix + strHandle;
+        return prefix + strHandle;
     }
 
     /**
@@ -247,7 +249,7 @@ public class HandleClient {
      * TODO: Please document this method
      */
     public PrivateKey getPemPrivateKey() throws HandleException, IOException {
-        File f = new File(strPathPrivatePEM);
+        File f = new File(certificate);
         FileInputStream fis = new FileInputStream(f);
         DataInputStream dis = new DataInputStream(fis);
         byte[] keyBytes = new byte[(int) f.length()];
