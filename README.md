@@ -15,8 +15,8 @@ Detail | Description
 **Plugin identifier**       | intranda_step_epic_pid
 **Plugin type**             | Step plugin
 **Licence**                 | GPL 2.0 or newer    
-**Documentation (German)**  | - no documentation available -
-**Documentation (English)** | - no documentation available -
+**Documentation (German)**  | https://docs.goobi.io/goobi-workflow-plugins-de/step/intranda_step_epic_pid
+**Documentation (English)** | https://docs.goobi.io/goobi-workflow-plugins-en/step/intranda_step_epic_pid
 
 ## Goobi details
 
