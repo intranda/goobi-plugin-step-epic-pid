@@ -55,8 +55,6 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
     private String title = "intranda_step_epic_pid";
     @Getter
     private Step step;
-    @Getter
-    private static final String PEM_FILE = "/opt/digiverso/goobi/config/certificate.pem";
     private String returnPath;
     @Getter @Setter
     private SubnodeConfiguration config;
