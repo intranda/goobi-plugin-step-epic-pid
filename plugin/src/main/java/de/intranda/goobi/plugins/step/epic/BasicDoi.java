@@ -6,14 +6,17 @@ import java.util.List;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
- * Most basic necessary info for a DOI
+ * Most basic necessary info for a DOI: it must contain at least 
  * 
- * TODO: Please add some more documentation here
+ * - title
+ * - author
+ * - publisher
+ * - publication date
+ * - institution
  * 
- * @author joel
- *
  */
 public class BasicDoi {
+    
     public List<String> lstFields;
     public List<String> TITLE;
     public List<String> AUTHORS;
@@ -22,7 +25,7 @@ public class BasicDoi {
     public List<String> INST;
 
     /**
-     * TODO: Please document this method
+     * Constructor
      */
     public BasicDoi() {
         lstFields = new ArrayList<String>();
@@ -34,7 +37,9 @@ public class BasicDoi {
     }
 
     /**
-     * TODO: Please document this method
+     * Returns a list of Field-Value pairs with the basic DOI information.
+     * 
+     * @return
      */
     public List<Pair<String, List<String>>> getValues() {
         List<Pair<String, List<String>>> lstValues = new ArrayList<Pair<String, List<String>>>();

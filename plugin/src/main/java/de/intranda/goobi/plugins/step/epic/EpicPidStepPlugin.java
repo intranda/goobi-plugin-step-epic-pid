@@ -47,6 +47,9 @@ import ugh.dl.MetadataType;
 import ugh.dl.Prefs;
 import ugh.exceptions.MetadataTypeNotAllowedException;
 
+/**
+ * Plugin registering Handles for documents
+ */
 @PluginImplementation
 @Log4j2
 public class EpicPidStepPlugin implements IStepPluginVersion2 {
@@ -61,6 +64,9 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
     @Getter @Setter
     private MetadataType urn;
 
+    /**
+     * Read config file for the plugin step
+     */
     @Override
     public void initialize(Step step, String returnPath) {
         this.returnPath = returnPath;
@@ -84,7 +90,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
     }
 
     /**
-     * Add metadata to the element containing the handle.
+     * Add handle ( "_urn") metadata to the docstruct.
      */
     private void setHandle(DocStruct docstruct, String strHandle) throws MetadataTypeNotAllowedException {
         Metadata md = new Metadata(urn);
@@ -135,7 +141,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
     }
 
     /**
-     * TODO: Please document this method
+     * Return the CatalogIDDigital for this document
      */
     public String getId(DocStruct logical) {
         List<Metadata> lstMetadata = logical.getAllMetadata();
@@ -191,6 +197,13 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
         return ret != PluginReturnValue.ERROR;
     }
 
+    /**
+     * Carry out the plugin:
+     * - get the current digital document 
+     * - for each physical and logical element of the document, create and register a handle
+     * - write the handles into the MetsMods file for the document
+     * 
+     */
     @Override
     public PluginReturnValue run() {
         boolean successfull = true;

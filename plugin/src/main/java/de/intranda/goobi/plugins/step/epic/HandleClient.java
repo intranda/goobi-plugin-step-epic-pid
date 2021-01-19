@@ -37,7 +37,7 @@ import net.handle.hdllib.Util;
 import ugh.dl.DocStruct;
 
 /**
- * TODO: Please document this class
+ * Creates requests for the Handle Service, querying handles and creating new handles.
  */
 @Log4j
 public class HandleClient {
@@ -59,13 +59,15 @@ public class HandleClient {
 
     // Non-Static fields
     private PrivateKey privKey;
-    private PublicKeyAuthenticationInfo authInfo;
+    PublicKeyAuthenticationInfo authInfo;
     private String strDOIMappingFile;
 
     /**
-     * Ctor: get private key
+     * Constructor.
      * 
-     * TODO: Please document this method
+     * @param config 
+     * @throws HandleException
+     * @throws IOException
      */
     public HandleClient(SubnodeConfiguration config) throws HandleException, IOException {
         this.user = config.getString("user");
@@ -78,9 +80,8 @@ public class HandleClient {
     }
 
     /**
-     * Given an object with specified ID, make a handle "id_xyz" with URL given in getURLForHandle. Returns the new Handle.
+     * Given an object with specified ID and postfix, make a handle "base/postfix_id" with URL given in getURLForHandle. Returns the new Handle.
      * 
-     * TODO: Please document this method
      */
     public String makeURLHandleForObject(String strObjectId, String strPostfix, Boolean boMakeDOI, DocStruct docstruct) throws HandleException {
         BasicDoi basicDOI = null;
@@ -104,15 +105,21 @@ public class HandleClient {
     }
 
     /**
-     * Make a new handle with specified URL. If boMintNewSuffix, add a suffix guar initConfig(myconfig);anteeing uniquness. Retuns the new handle.
+     * Make a new handle with specified URL. If boMintNewSuffix, add a suffix guaranteeing uniquness. Retuns the new handle.
      * 
-     * TODO: Please document this method
+     * @param strNewHandle
+     * @param url
+     * @param separator
+     * @param boMintNewSuffix
+     * @param boMakeDOI
+     * @param basicDOI
+     * @return
+     * @throws HandleException
      */
     public String newURLHandle(String strNewHandle, String url, String separator, Boolean boMintNewSuffix, Boolean boMakeDOI, BasicDoi basicDOI)
             throws HandleException {
 
         if (!boMintNewSuffix && isHandleRegistered(strNewHandle)) {
-            resolveRequest(strNewHandle);
             return strNewHandle;
         }
 
@@ -176,35 +183,7 @@ public class HandleClient {
     }
 
     /**
-     * TODO: Please document this method
-     */
-    public void resolveRequest(String strHandle) throws HandleException {
-        // Get the UTF8 encoding of the desired handle.
-        byte bytesHandle[] = Util.encodeString(strHandle);
-        // Create a resolution request.
-        // (without specifying any types, indexes)
-        ResolutionRequest request = new ResolutionRequest(bytesHandle, null, null, authInfo);
-        HandleResolver resolver = new HandleResolver();
-        AbstractResponse response = resolver.processRequest(request);
-
-        // Check the response to see if the operation was successful.
-        if (response.responseCode == AbstractMessage.RC_SUCCESS) {
-            // The resolution was successful, so we'll cast the response
-            // and get the handle values.
-            HandleValue values[] = ((ResolutionResponse) response).getHandleValues();
-            for (int i = 0; i < values.length; i++) {
-                // TODO: What is this for?
-                log.debug(String.valueOf(values[i]));
-            }
-        } else {
-            log.debug(AbstractResponse.getResponseCodeMessage(response.responseCode) + " : " + strHandle);
-        }
-    }
-
-    /**
-     * Change the URL for the handle. Returns true if successful, falso otherwise
-     * 
-     * TODO: Please document this method
+     * Change the URL for the handle. Returns true if successful, false otherwise
      */
     public Boolean changleHandleURL(String handle, String newUrl) throws HandleException {
         if (StringUtils.isEmpty(handle) || StringUtils.isEmpty(newUrl))
@@ -246,7 +225,8 @@ public class HandleClient {
     }
 
     /**
-     * TODO: Please document this method
+     * Extract the private key from the .PEM certificate.
+     * 
      */
     public PrivateKey getPemPrivateKey() throws HandleException, IOException {
         File f = new File(certificate);
@@ -274,9 +254,8 @@ public class HandleClient {
     }
 
     /**
-     * registered?
+     * Returns true if the handle has already been registered, false otherwise.
      * 
-     * TODO: Please document this method
      */
     public boolean isHandleRegistered(String handle) throws HandleException {
         boolean handleRegistered = false;
@@ -312,11 +291,12 @@ public class HandleClient {
     }
 
     /**
-     * TODO: Please document this method
+     * Create a DOI (with basic information) for the docstruct, and update the corresponding handle with the DOI info.
      */
     public Boolean addDOI(DocStruct physical, String handle) throws JDOMException, IOException, HandleException {
-        if (StringUtils.isEmpty(handle))
+        if (StringUtils.isEmpty(handle)) {
             throw new IllegalArgumentException("URL cannot be empty");
+        }
         log.debug("Update Handle: " + handle + ". Generating DOI.");
         try {
             MakeDOI makeDOI = new MakeDOI(strDOIMappingFile);
@@ -379,6 +359,10 @@ public class HandleClient {
         }
     }
 
+    /**
+     * Setter
+     * @param strMappingFile
+     */
     public void setDOIMappingFile(String strMappingFile) {
         this.strDOIMappingFile = strMappingFile;
     }
