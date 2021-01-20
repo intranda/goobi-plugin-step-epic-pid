@@ -22,18 +22,23 @@ import ugh.dl.DocStruct;
 import ugh.dl.Metadata;
 
 /**
- * TODO: Please document this class
+ * Class for reading the metadata necessary for a DOI out of an XML document (eg a MetsMods file).
+ * 
  */
 public class MakeDOI {
 
-    //The mapping document
+    
+    /**
+   *  The mapping document: this shows which metadata from the MetsMods file should be recorded in which filed of the DOI
+     * 
+     */
     private Document mapping;
 
     //dictionary of mappings
     private HashMap<String, Element> doiMappings;
 
     /**
-     * Static entry point
+     * Static entry point for testing
      * 
      * @param args
      * @throws IOException
@@ -49,7 +54,7 @@ public class MakeDOI {
     }
 
     /**
-     * ctor
+     * ctor: takes the mapping file as param.
      * 
      * @throws IOException
      * @throws JDOMException
@@ -66,7 +71,7 @@ public class MakeDOI {
     }
 
     /**
-     * Given the root elt of the xml file which we are examining, find the text of the entry correspoinding to the DOI element specified
+     * Given the root elt of the xml file which we are examining, find the text of the entry correspoinding to the DOI field specified
      * 
      * @param field
      * @param root
@@ -197,7 +202,7 @@ public class MakeDOI {
     }
 
     /**
-     * TODO: Please document this method
+     * Get the metadata values for the specified element name, and add a corresponding Element to the parent for each such value.
      */
     private void addElements(Element parent, String strEltName) {
         List<String> lstValues = getValues(strEltName, parent);
@@ -253,7 +258,7 @@ public class MakeDOI {
     }
 
     /**
-     * TODO: Please document this method
+     * Get the values of metadata for the specified field, in the specified struct.
      */
     private List<String> getValues(String field, DocStruct struct) {
         ArrayList<String> lstDefault = new ArrayList<String>();
@@ -289,7 +294,7 @@ public class MakeDOI {
     }
 
     /**
-     * TODO: Please document this method
+     * Get all metadata of type "name" in the specified struct.
      */
     private List<String> getMetedtaFromMets(DocStruct struct, String name) {
         ArrayList<String> lstValues = new ArrayList<String>();
