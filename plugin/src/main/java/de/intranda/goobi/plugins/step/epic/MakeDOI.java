@@ -20,6 +20,7 @@ import org.jdom2.output.XMLOutputter;
 
 import ugh.dl.DocStruct;
 import ugh.dl.Metadata;
+import ugh.dl.Person;
 
 /**
  * Class for reading the metadata necessary for a DOI out of an XML document (eg a MetsMods file).
@@ -27,9 +28,8 @@ import ugh.dl.Metadata;
  */
 public class MakeDOI {
 
-    
     /**
-   *  The mapping document: this shows which metadata from the MetsMods file should be recorded in which filed of the DOI
+     * The mapping document: this shows which metadata from the MetsMods file should be recorded in which filed of the DOI
      * 
      */
     private Document mapping;
@@ -186,12 +186,12 @@ public class MakeDOI {
         ident.setAttribute("identifierType", "DOI");
         ident.addContent(strDOI);
         root.addContent(ident);
-        
+
         //Creators
         Element creators = new Element("creators");
         Element creator = new Element("creator");
         List<String> lstCreatorNames = getValues("creatorName", root);
-        
+
         for (String strCreatorName : lstCreatorNames) {
             Element creatorName = new Element("creatorName");
             creatorName.addContent(strCreatorName);
@@ -274,7 +274,8 @@ public class MakeDOI {
             metadata = eltMap.getChildText("metadata");
         }
 
-        List<String> lstLocalValues = getMetedtaFromMets(struct, metadata);
+        List<String> lstLocalValues = getMetedataFromMets(struct, metadata);
+
         if (!lstLocalValues.isEmpty()) {
             return lstLocalValues;
         }
@@ -282,7 +283,7 @@ public class MakeDOI {
         if (eltMap != null) {
             //could not find first choice? then try alternatives
             for (Element eltAlt : eltMap.getChildren("altMetadata")) {
-                lstLocalValues = getMetedtaFromMets(struct, eltAlt.getText());
+                lstLocalValues = getMetedataFromMets(struct, eltAlt.getText());
                 if (!lstLocalValues.isEmpty()) {
                     return lstLocalValues;
                 }
@@ -296,11 +297,46 @@ public class MakeDOI {
     /**
      * Get all metadata of type "name" in the specified struct.
      */
-    private List<String> getMetedtaFromMets(DocStruct struct, String name) {
+    private List<String> getMetedataFromMets(DocStruct struct, String name) {
+
+        if (fieldIsPerson(name)) {
+            return getPersonFromMets(struct, name);
+        }
+
         ArrayList<String> lstValues = new ArrayList<String>();
         for (Metadata mdata : struct.getAllMetadata()) {
             if (mdata.getType().getName().equalsIgnoreCase(name)) {
                 lstValues.add(mdata.getValue());
+            }
+        }
+        return lstValues;
+    }
+
+    private boolean fieldIsPerson(String name) {
+
+        if (name == null) {
+            return false;
+        }
+
+        return name.equalsIgnoreCase("Author") || name.equalsIgnoreCase("Publisher");
+    }
+
+    /**
+     * Get all persons of type "name" in the specified struct.
+     */
+    private List<String> getPersonFromMets(DocStruct struct, String name) {
+
+        ArrayList<String> lstValues = new ArrayList<String>();
+        for (Person mdata : struct.getAllPersons()) {
+            if (mdata.getRole().equalsIgnoreCase(name)) {
+                String strName = mdata.getDisplayname();
+                if (strName == null || strName.isEmpty()) {
+                    strName = mdata.getLastname();
+                }
+                if (strName == null || strName.isEmpty()) {
+                    strName = mdata.getInstitution();
+                }
+                lstValues.add(strName);
             }
         }
         return lstValues;

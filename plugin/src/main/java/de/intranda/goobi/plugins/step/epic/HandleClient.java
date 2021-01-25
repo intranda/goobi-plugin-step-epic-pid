@@ -65,7 +65,7 @@ public class HandleClient {
     /**
      * Constructor.
      * 
-     * @param config 
+     * @param config
      * @throws HandleException
      * @throws IOException
      */
@@ -180,6 +180,78 @@ public class HandleClient {
 
     private String getURLForHandle(String strHandle) {
         return prefix + strHandle;
+    }
+
+    /**
+     * Given an object with specified handle, update the URL (and if required DOI)
+     * 
+     */
+    public void updateURLHandleForObject(String handle, String strPostfix, Boolean boMakeDOI, DocStruct docstruct) throws HandleException {
+        BasicDoi basicDOI = null;
+        if (boMakeDOI) {
+            try {
+                MakeDOI makeDOI = new MakeDOI(strDOIMappingFile);
+                basicDOI = makeDOI.getBasicDoi(docstruct);
+            } catch (Exception e) {
+                throw new HandleException(0, e.getMessage());
+            }
+        }
+
+        String strNewURL = getURLForHandle(handle);
+        changleHandleURL(handle, strNewURL);
+        
+        if (boMakeDOI) {
+            updateHandleDOI(handle, strNewURL, basicDOI);
+        }
+    }
+
+    /**
+     * Make a new handle with specified URL. If boMintNewSuffix, add a suffix guaranteeing uniquness. Retuns the new handle.
+     * 
+     * @param strNewHandle
+     * @param url
+     * @param separator
+     * @param boMintNewSuffix
+     * @param boMakeDOI
+     * @param basicDOI
+     * @return
+     * @throws HandleException
+     */
+    public Boolean updateHandleDOI(String handle, String url, BasicDoi basicDOI) throws HandleException {
+
+        // Define the admin record for the handle we want to create
+        AdminRecord admin = createAdminRecord(user, ADMIN_INDEX);
+
+        // Make a create-handle request.
+        HandleValue values[] = { new HandleValue(ADMIN_RECORD_INDEX, // unique index
+                Util.encodeString("HS_ADMIN"), // handle value type
+                Encoder.encodeAdminRecord(admin)), //data
+
+                new HandleValue(URL_RECORD_INDEX, // unique index
+                        "URL", // handle value type
+                        url) }; //data
+
+        //add DOI info
+        HandleValue valuesDOI[] = getHandleValuesFromDOI(basicDOI);
+        values = (HandleValue[]) ArrayUtils.addAll(values, valuesDOI);
+
+        // Create the request to send and the resolver to send it
+        ModifyValueRequest request = new ModifyValueRequest(Util.encodeString(handle), values, authInfo);
+
+        HandleResolver resolver = new HandleResolver();
+        AbstractResponse response;
+
+        // Let the resolver process the request
+        response = resolver.processRequest(request);
+
+        // Check the response to see if operation was successful
+        if (response.responseCode == AbstractMessage.RC_SUCCESS) {
+            log.debug(response);
+            return true;
+        } else {
+            log.debug(response);
+            return false;
+        }
     }
 
     /**
@@ -361,6 +433,7 @@ public class HandleClient {
 
     /**
      * Setter
+     * 
      * @param strMappingFile
      */
     public void setDOIMappingFile(String strMappingFile) {

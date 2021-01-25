@@ -12,15 +12,7 @@ import org.apache.commons.configuration.reloading.FileChangedReloadingStrategy;
 import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
 import org.junit.Test;
 
-import net.handle.hdllib.AbstractMessage;
-import net.handle.hdllib.AbstractResponse;
 import net.handle.hdllib.HandleException;
-import net.handle.hdllib.HandleResolver;
-import net.handle.hdllib.HandleValue;
-import net.handle.hdllib.PublicKeyAuthenticationInfo;
-import net.handle.hdllib.ResolutionRequest;
-import net.handle.hdllib.ResolutionResponse;
-import net.handle.hdllib.Util;
 import ugh.dl.DigitalDocument;
 import ugh.dl.DocStruct;
 import ugh.dl.Fileformat;
@@ -111,34 +103,10 @@ public class EpicPidPluginTest {
         //        //        test.changleHandleURL(strUniqueHandle, "https://www.theguardian.com/international");
         //        test.resolveRequest(strUniqueHandle);
         //
-        EpicPidPluginTest.resolveRequest("21.T11998/TEST02", test.authInfo);
+//        test.resolveRequest("21.T11998/TEST02");
         //        test.changleHandleURL("21.T11998/TEST02", "https://www.theguardian.com/international");
         //        test.resolveRequest("21.T11998/TEST02");
 
         //        AddValueRequest 
-    }
-    
-    /**
-     * Check that a handle request can be carried out without an exception being thrown.
-     * @param authInfo 
-     */
-    public static void resolveRequest(String strHandle, PublicKeyAuthenticationInfo authInfo) throws HandleException {
-        // Get the UTF8 encoding of the desired handle.
-        byte bytesHandle[] = Util.encodeString(strHandle);
-        // Create a resolution request.
-        // (without specifying any types, indexes)
-        ResolutionRequest request = new ResolutionRequest(bytesHandle, null, null, authInfo);
-        HandleResolver resolver = new HandleResolver();
-        AbstractResponse response = resolver.processRequest(request);
-
-        // Check the response to see if the operation was successful.
-        if (response.responseCode == AbstractMessage.RC_SUCCESS) {
-            // The resolution was successful, so we'll cast the response
-            // and get the handle values.
-            HandleValue values[] = ((ResolutionResponse) response).getHandleValues();
-           
-        } else {
-            //not successful
-        }
     }
 }
