@@ -121,7 +121,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
         if (docstruct.getAllChildren() != null) {
             // run recursive through all children
             for (DocStruct ds : docstruct.getAllChildren()) {
-                return addHandle(ds, strId, false);
+                addHandle(ds, strId, false);
             }
         } else {
             //already has a handle?
@@ -221,7 +221,8 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
             //read the metatdata
             Process process = step.getProzess();
             Prefs prefs = process.getRegelsatz().getPreferences();
-            urn = prefs.getMetadataTypeByName("_urn");
+            String strUrn = config.getString("handleMetadata", "_urn");
+            urn = prefs.getMetadataTypeByName(strUrn);
             Fileformat fileformat = process.readMetadataFile();
 
             DigitalDocument digitalDocument = fileformat.getDigitalDocument();

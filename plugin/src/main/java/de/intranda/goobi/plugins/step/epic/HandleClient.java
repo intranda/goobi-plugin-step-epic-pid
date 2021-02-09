@@ -123,19 +123,26 @@ public class HandleClient {
             return strNewHandle;
         }
 
+        int iCount = 0;
+        String strOrig = strNewHandle;
+
         //create a unique suffix?
         if (boMintNewSuffix) {
-            int iCount = 0;
             String strTestHandle = strNewHandle;
+            log.debug("Check handle " + strTestHandle);
             while (isHandleRegistered(strTestHandle)) {
-                strTestHandle = strNewHandle + separator + iCount;
+
+                log.debug("Handle exists " + strTestHandle);
+
+                strTestHandle = strNewHandle + "-" + iCount;
                 iCount++;
-                if (iCount > 1000) {
+                if (iCount > 5000) {
                     throw new HandleException(HandleException.INTERNAL_ERROR, "Registry query always returning true: " + strNewHandle);
                 }
             }
 
             //test handle ok:
+            log.debug("Handle OK " + strTestHandle);
             strNewHandle = strTestHandle;
         }
 
@@ -158,6 +165,7 @@ public class HandleClient {
         }
 
         // Create the request to send and the resolver to send it
+        log.debug("Create " + strNewHandle);
         CreateHandleRequest request = new CreateHandleRequest(Util.encodeString(strNewHandle), values, authInfo);
 
         HandleResolver resolver = new HandleResolver();
@@ -173,9 +181,35 @@ public class HandleClient {
             String strFinalHandle = Util.decodeString(btHandle);
             log.debug("Handle created: " + Util.decodeString(btHandle));
             return strFinalHandle;
-        } else {
-            throw new HandleException(HandleException.INTERNAL_ERROR, "Failed trying to create a new handle at the server, response was" + response);
+        } else if (response.responseCode == AbstractMessage.RC_HANDLE_ALREADY_EXISTS) {
+
+            while (response.responseCode == AbstractMessage.RC_HANDLE_ALREADY_EXISTS) {
+                iCount++;
+                String strNext = strOrig + "-" + iCount;
+                log.debug("Create 2 " + strNext);
+                CreateHandleRequest request2 = new CreateHandleRequest(Util.encodeString(strNext), values, authInfo);
+                // Let the resolver process the request
+                response = resolver.processRequest(request2);
+                if (response.responseCode == AbstractMessage.RC_SUCCESS) {
+                    log.debug(response);
+                    byte[] btHandle = ((CreateHandleResponse) response).handle;
+                    String strFinalHandle = Util.decodeString(btHandle);
+                    log.debug("Handle created: " + Util.decodeString(btHandle));
+                    return strFinalHandle;
+                }
+
+                if (iCount > 2000) {
+                    throw new HandleException(HandleException.INTERNAL_ERROR,
+                            "Failed trying to create handle at the server, response was" + response + " " + strNewHandle);
+                }
+            }
         }
+
+        //otherwise:
+        
+        throw new HandleException(HandleException.INTERNAL_ERROR,
+                "Failed trying to create a new handle at the server, response was" + response + " " + strNewHandle);
+
     }
 
     private String getURLForHandle(String strHandle) {
@@ -199,7 +233,7 @@ public class HandleClient {
 
         String strNewURL = getURLForHandle(handle);
         changleHandleURL(handle, strNewURL);
-        
+
         if (boMakeDOI) {
             updateHandleDOI(handle, strNewURL, basicDOI);
         }
@@ -344,6 +378,11 @@ public class HandleClient {
             log.debug("Handle " + handle + " registered.");
             handleRegistered = true;
         }
+        if ((response != null && response.responseCode != AbstractMessage.RC_HANDLE_NOT_FOUND)) {
+            handleRegistered = true;
+        }
+
+        log.debug("Handle not found " + handle + " " + response.responseCode);
         return handleRegistered;
     }
 
