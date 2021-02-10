@@ -88,7 +88,8 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
 
     /**
      * Add metadata to the element containing the handle.
-     * @throws HandleException 
+     * 
+     * @throws HandleException
      */
     private void setHandle(DocStruct docstruct, String strHandle) throws MetadataTypeNotAllowedException, HandleException {
 
@@ -114,47 +115,46 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
      * 
      * @return Returns the handle.
      */
-    public String addHandle(DocStruct docstruct, String strId, Boolean boMakeDOI)
+    public int addHandle(DocStruct docstruct, String strId, Boolean boMakeDOI, int iLastSuffix, HandleClient handler)
             throws HandleException, IOException, MetadataTypeNotAllowedException {
 
-        HandleClient handler = new HandleClient(config);
+        //        HandleClient handler = new HandleClient(config);
+        //already has a handle?
+        String strHandle = getHandle(docstruct);
+
+        //if not, make one.
+        if (boMakeDOI) {
+            handler.setDOIMappingFile(config.getString("doiMapping", null));
+        }
+
+        String name = config.getString("name");
+        String prefix = config.getString("prefix");
+        String separator = config.getString("separator", "-");
+        String strPostfix = "";
+        if (prefix != null && !prefix.isEmpty()) {
+            strPostfix = prefix + separator;
+        }
+        if (name != null && !name.isEmpty()) {
+            strPostfix += name + separator;
+        }
+
+        if (strHandle == null) {
+            strHandle = handler.makeURLHandleForObject(strId, strPostfix, boMakeDOI, docstruct, iLastSuffix);
+            iLastSuffix++;
+        } else {
+            handler.updateURLHandleForObject(strHandle, strPostfix, boMakeDOI, docstruct);
+        }
+
+        setHandle(docstruct, strHandle);
+
         if (docstruct.getAllChildren() != null) {
             // run recursive through all children
             for (DocStruct ds : docstruct.getAllChildren()) {
-                addHandle(ds, strId, false);
+                iLastSuffix = addHandle(ds, strId, false, iLastSuffix, handler);
             }
-        } else {
-            //already has a handle?
-            String strHandle = getHandle(docstruct);
-
-            //if not, make one.
-            if (boMakeDOI) {
-                handler.setDOIMappingFile(config.getString("doiMapping", null));
-            }
-
-            String name = config.getString("name");
-            String prefix = config.getString("prefix");
-            String separator = config.getString("separator", "-");
-            String strPostfix = "";
-            if (prefix != null && !prefix.isEmpty()) {
-                strPostfix = prefix + separator;
-            }
-            if (name != null && !name.isEmpty()) {
-                strPostfix += name + separator;
-            }
-
-            if (strHandle == null) {
-                strHandle = handler.makeURLHandleForObject(strId, strPostfix, boMakeDOI, docstruct);
-            } else {
-                handler.updateURLHandleForObject(strHandle, strPostfix, boMakeDOI, docstruct);
-            }
-
-            setHandle(docstruct, strHandle);
-
-            return strHandle;
         }
-        return null;
 
+        return iLastSuffix;
     }
 
     /**
@@ -231,20 +231,24 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
             String strId = getId(logical);
 
             //add handles to each physical and logical element
-            Boolean boMakeDOI = config.getBoolean("doiGenerate", false);
-            try {
-                String strLogicalHandle = addHandle(logical, strId, boMakeDOI);
-            } catch (HandleException e) {
-                log.error(e.getMessage(), e);
-            }
-            try {
-                String strPhysicalHandle = addHandle(physical, strId, false);
-            } catch (HandleException e) {
-                log.error(e.getMessage(), e);
-            }
+            synchronized (this) {
+                Boolean boMakeDOI = config.getBoolean("doiGenerate", false);
+                HandleClient handler = new HandleClient(config);
+                int iLastSuffix = 0;
+                try {
+                    iLastSuffix = addHandle(logical, strId, boMakeDOI, 0, handler);
+                } catch (HandleException e) {
+                    log.error(e.getMessage(), e);
+                }
+                try {
+                    iLastSuffix = addHandle(physical, strId, false, iLastSuffix, handler);
+                } catch (HandleException e) {
+                    log.error(e.getMessage(), e);
+                }
 
-            //and save the metadata again.
-            process.writeMetadataFile(fileformat);
+                //and save the metadata again.
+                process.writeMetadataFile(fileformat);
+            }
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);

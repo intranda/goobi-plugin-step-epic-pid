@@ -83,7 +83,7 @@ public class HandleClient {
      * Given an object with specified ID and postfix, make a handle "base/postfix_id" with URL given in getURLForHandle. Returns the new Handle.
      * 
      */
-    public String makeURLHandleForObject(String strObjectId, String strPostfix, Boolean boMakeDOI, DocStruct docstruct) throws HandleException {
+    public String makeURLHandleForObject(String strObjectId, String strPostfix, Boolean boMakeDOI, DocStruct docstruct, int iLastSuffix) throws HandleException {
         BasicDoi basicDOI = null;
         if (boMakeDOI) {
             try {
@@ -94,7 +94,7 @@ public class HandleClient {
             }
         }
 
-        String strNewHandle = newURLHandle(base + "/" + strPostfix + strObjectId, prefix, separator, true, boMakeDOI, basicDOI);
+        String strNewHandle = newURLHandle(base + "/" + strPostfix + strObjectId, prefix, separator, true, boMakeDOI, basicDOI, iLastSuffix);
         String strNewURL = getURLForHandle(strNewHandle);
         if (changleHandleURL(strNewHandle, strNewURL)) {
             return strNewHandle;
@@ -116,14 +116,14 @@ public class HandleClient {
      * @return
      * @throws HandleException
      */
-    public String newURLHandle(String strNewHandle, String url, String separator, Boolean boMintNewSuffix, Boolean boMakeDOI, BasicDoi basicDOI)
+    public String newURLHandle(String strNewHandle, String url, String separator, Boolean boMintNewSuffix, Boolean boMakeDOI, BasicDoi basicDOI, int iLastSuffix)
             throws HandleException {
 
         if (!boMintNewSuffix && isHandleRegistered(strNewHandle)) {
             return strNewHandle;
         }
 
-        int iCount = 0;
+        int iCount = iLastSuffix;
         String strOrig = strNewHandle;
 
         //create a unique suffix?
