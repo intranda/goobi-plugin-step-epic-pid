@@ -1,6 +1,8 @@
 package de.intranda.goobi.plugins.step.epic;
 
 import java.io.IOException;
+import java.nio.file.Paths;
+
 
 /**
  * This file is part of a plugin for Goobi - a Workflow tool for the support of mass digitization.
@@ -25,7 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.apache.commons.configuration.SubnodeConfiguration;
-import org.apache.solr.client.solrj.io.stream.SolrStream.HandledException;
 import org.goobi.beans.Process;
 import org.goobi.beans.Step;
 import org.goobi.production.enums.PluginGuiType;
@@ -35,6 +36,7 @@ import org.goobi.production.enums.StepReturnValue;
 import org.goobi.production.plugin.interfaces.IStepPluginVersion2;
 
 import de.sub.goobi.config.ConfigPlugins;
+import de.sub.goobi.helper.StorageProvider;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -115,7 +117,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
      * 
      * @return Returns the handle.
      */
-    public int addHandle(DocStruct docstruct, String strId, Boolean boMakeDOI, int iLastSuffix, HandleClient handler)
+    public String addHandle(DocStruct docstruct, String strId, Boolean boMakeDOI, HandleClient handler)
             throws HandleException, IOException, MetadataTypeNotAllowedException {
 
         //        HandleClient handler = new HandleClient(config);
@@ -139,8 +141,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
         }
 
         if (strHandle == null) {
-            strHandle = handler.makeURLHandleForObject(strId, strPostfix, boMakeDOI, docstruct, iLastSuffix);
-            iLastSuffix++;
+            strHandle = handler.makeURLHandleForObject(strId, strPostfix, boMakeDOI, docstruct);
         } else {
             handler.updateURLHandleForObject(strHandle, strPostfix, boMakeDOI, docstruct);
         }
@@ -150,11 +151,11 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
         if (docstruct.getAllChildren() != null) {
             // run recursive through all children
             for (DocStruct ds : docstruct.getAllChildren()) {
-                iLastSuffix = addHandle(ds, strId, false, iLastSuffix, handler);
+               addHandle(ds, strId, false, handler);
             }
         }
 
-        return iLastSuffix;
+        return strHandle;
     }
 
     /**
@@ -217,31 +218,33 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
     @Override
     public PluginReturnValue run() {
         boolean successfull = true;
+        String strTempFolder = null;
         try {
-            //read the metatdata
-            Process process = step.getProzess();
-            Prefs prefs = process.getRegelsatz().getPreferences();
-            String strUrn = config.getString("handleMetadata", "_urn");
-            urn = prefs.getMetadataTypeByName(strUrn);
-            Fileformat fileformat = process.readMetadataFile();
-
-            DigitalDocument digitalDocument = fileformat.getDigitalDocument();
-            DocStruct logical = digitalDocument.getLogicalDocStruct();
-            DocStruct physical = digitalDocument.getPhysicalDocStruct();
-            String strId = getId(logical);
-
-            //add handles to each physical and logical element
             synchronized (this) {
+                
+                //read the metatdata
+                Process process = step.getProzess();
+                Prefs prefs = process.getRegelsatz().getPreferences();
+                String strUrn = config.getString("handleMetadata", "_urn");
+                urn = prefs.getMetadataTypeByName(strUrn);
+                Fileformat fileformat = process.readMetadataFile();
+
+                DigitalDocument digitalDocument = fileformat.getDigitalDocument();
+                DocStruct logical = digitalDocument.getLogicalDocStruct();
+                DocStruct physical = digitalDocument.getPhysicalDocStruct();
+                String strId = getId(logical);
+
+                //add handles to each physical and logical element
                 Boolean boMakeDOI = config.getBoolean("doiGenerate", false);
                 HandleClient handler = new HandleClient(config);
-                int iLastSuffix = 0;
+                strTempFolder = handler.tempFolder;
                 try {
-                    iLastSuffix = addHandle(logical, strId, boMakeDOI, 0, handler);
+                    addHandle(logical, strId, boMakeDOI,  handler);
                 } catch (HandleException e) {
                     log.error(e.getMessage(), e);
                 }
                 try {
-                    iLastSuffix = addHandle(physical, strId, false, iLastSuffix, handler);
+                    addHandle(physical, strId, false, handler);
                 } catch (HandleException e) {
                     log.error(e.getMessage(), e);
                 }
@@ -252,6 +255,10 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
+        } finally {
+            if (strTempFolder != null) {
+                StorageProvider.getInstance().deleteDataInDir(Paths.get(strTempFolder));
+            }
         }
 
         log.info("Epic Pid step plugin executed");

@@ -19,6 +19,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jdom2.JDOMException;
 
+import de.sub.goobi.config.ConfigurationHelper;
 import lombok.extern.log4j.Log4j;
 import net.handle.hdllib.AbstractMessage;
 import net.handle.hdllib.AbstractResponse;
@@ -32,7 +33,7 @@ import net.handle.hdllib.HandleValue;
 import net.handle.hdllib.ModifyValueRequest;
 import net.handle.hdllib.PublicKeyAuthenticationInfo;
 import net.handle.hdllib.ResolutionRequest;
-import net.handle.hdllib.ResolutionResponse;
+import net.handle.hdllib.FilesystemConfiguration;
 import net.handle.hdllib.Util;
 import ugh.dl.DocStruct;
 
@@ -61,9 +62,13 @@ public class HandleClient {
     private PrivateKey privKey;
     PublicKeyAuthenticationInfo authInfo;
     private String strDOIMappingFile;
-
+    HandleResolver resolver;
+    private ArrayList<String> lstCheckedHandles; 
+    private int iLastSuffix;
+    String tempFolder;
+    
     /**
-     * Constructor.
+     * Constructor. Note that this resets the last suffix index: if this client is used for multiple IDs, call resetSuffix() between them.
      * 
      * @param config
      * @throws HandleException
@@ -77,13 +82,22 @@ public class HandleClient {
         this.certificate = config.getString("certificate");
         this.privKey = getPemPrivateKey();
         this.authInfo = new PublicKeyAuthenticationInfo(Util.encodeString(user), ADMIN_INDEX, privKey);
+
+        this.lstCheckedHandles = new ArrayList<String>();
+        //specify the temp folder:
+        tempFolder = ConfigurationHelper.getInstance().getTemporaryFolder() + ".handles";
+        net.handle.hdllib.FilesystemConfiguration handleConfig = new FilesystemConfiguration(new File(tempFolder));
+        resolver = new HandleResolver();
+        resolver.setConfiguration(handleConfig);
+
+        resetSuffix();
     }
 
     /**
      * Given an object with specified ID and postfix, make a handle "base/postfix_id" with URL given in getURLForHandle. Returns the new Handle.
      * 
      */
-    public String makeURLHandleForObject(String strObjectId, String strPostfix, Boolean boMakeDOI, DocStruct docstruct, int iLastSuffix) throws HandleException {
+    public String makeURLHandleForObject(String strObjectId, String strPostfix, Boolean boMakeDOI, DocStruct docstruct) throws HandleException {
         BasicDoi basicDOI = null;
         if (boMakeDOI) {
             try {
@@ -94,7 +108,7 @@ public class HandleClient {
             }
         }
 
-        String strNewHandle = newURLHandle(base + "/" + strPostfix + strObjectId, prefix, separator, true, boMakeDOI, basicDOI, iLastSuffix);
+        String strNewHandle = newURLHandle(base + "/" + strPostfix + strObjectId, prefix, separator, true, boMakeDOI, basicDOI);
         String strNewURL = getURLForHandle(strNewHandle);
         if (changleHandleURL(strNewHandle, strNewURL)) {
             return strNewHandle;
@@ -116,14 +130,13 @@ public class HandleClient {
      * @return
      * @throws HandleException
      */
-    public String newURLHandle(String strNewHandle, String url, String separator, Boolean boMintNewSuffix, Boolean boMakeDOI, BasicDoi basicDOI, int iLastSuffix)
+    public String newURLHandle(String strNewHandle, String url, String separator, Boolean boMintNewSuffix, Boolean boMakeDOI, BasicDoi basicDOI)
             throws HandleException {
 
         if (!boMintNewSuffix && isHandleRegistered(strNewHandle)) {
             return strNewHandle;
         }
 
-        int iCount = iLastSuffix;
         String strOrig = strNewHandle;
 
         //create a unique suffix?
@@ -133,10 +146,10 @@ public class HandleClient {
             while (isHandleRegistered(strTestHandle)) {
 
                 log.debug("Handle exists " + strTestHandle);
+                iLastSuffix++;
+                strTestHandle = strNewHandle + "-" + iLastSuffix;
 
-                strTestHandle = strNewHandle + "-" + iCount;
-                iCount++;
-                if (iCount > 5000) {
+                if (iLastSuffix > 5000) {
                     throw new HandleException(HandleException.INTERNAL_ERROR, "Registry query always returning true: " + strNewHandle);
                 }
             }
@@ -168,7 +181,7 @@ public class HandleClient {
         log.debug("Create " + strNewHandle);
         CreateHandleRequest request = new CreateHandleRequest(Util.encodeString(strNewHandle), values, authInfo);
 
-        HandleResolver resolver = new HandleResolver();
+        //        HandleResolver resolver = new HandleResolver();
         AbstractResponse response;
 
         // Let the resolver process the request
@@ -184,8 +197,8 @@ public class HandleClient {
         } else if (response.responseCode == AbstractMessage.RC_HANDLE_ALREADY_EXISTS) {
 
             while (response.responseCode == AbstractMessage.RC_HANDLE_ALREADY_EXISTS) {
-                iCount++;
-                String strNext = strOrig + "-" + iCount;
+                iLastSuffix++;
+                String strNext = strOrig + "-" + iLastSuffix;
                 log.debug("Create 2 " + strNext);
                 CreateHandleRequest request2 = new CreateHandleRequest(Util.encodeString(strNext), values, authInfo);
                 // Let the resolver process the request
@@ -198,7 +211,7 @@ public class HandleClient {
                     return strFinalHandle;
                 }
 
-                if (iCount > 2000) {
+                if (iLastSuffix > 5000) {
                     throw new HandleException(HandleException.INTERNAL_ERROR,
                             "Failed trying to create handle at the server, response was" + response + " " + strNewHandle);
                 }
@@ -206,7 +219,7 @@ public class HandleClient {
         }
 
         //otherwise:
-        
+
         throw new HandleException(HandleException.INTERNAL_ERROR,
                 "Failed trying to create a new handle at the server, response was" + response + " " + strNewHandle);
 
@@ -272,7 +285,7 @@ public class HandleClient {
         // Create the request to send and the resolver to send it
         ModifyValueRequest request = new ModifyValueRequest(Util.encodeString(handle), values, authInfo);
 
-        HandleResolver resolver = new HandleResolver();
+        //        HandleResolver resolver = new HandleResolver();
         AbstractResponse response;
 
         // Let the resolver process the request
@@ -302,7 +315,7 @@ public class HandleClient {
             // Make a create-handle request.
             HandleValue values[] = { handleNew };
             ModifyValueRequest req = new ModifyValueRequest(Util.encodeString(handle), values, authInfo);
-            HandleResolver resolver = new HandleResolver();
+            //            HandleResolver resolver = new HandleResolver();
             AbstractResponse response = resolver.processRequest(req);
             String msg = AbstractMessage.getResponseCodeMessage(response.responseCode);
             log.debug("Response code from Handle request: " + msg);
@@ -364,10 +377,17 @@ public class HandleClient {
      * 
      */
     public boolean isHandleRegistered(String handle) throws HandleException {
+        
+        //already checked?
+        if (lstCheckedHandles.contains(handle)) {
+            return true;
+        }
+        
+        //otherwise check:
         boolean handleRegistered = false;
         ResolutionRequest req = buildResolutionRequest(handle);
         AbstractResponse response = null;
-        HandleResolver resolver = new HandleResolver();
+        //        HandleResolver resolver = new HandleResolver();
         try {
             response = resolver.processRequest(req);
         } catch (HandleException ex) {
@@ -379,10 +399,15 @@ public class HandleClient {
             handleRegistered = true;
         }
         if ((response != null && response.responseCode != AbstractMessage.RC_HANDLE_NOT_FOUND)) {
+            log.debug("Handle " + handle + " has error: " + response.responseCode);
             handleRegistered = true;
         }
 
-        log.debug("Handle not found " + handle + " " + response.responseCode);
+        //save, so do not need to call again:
+        if (handleRegistered) {
+            lstCheckedHandles.add(handle);
+        }
+        
         return handleRegistered;
     }
 
@@ -416,7 +441,7 @@ public class HandleClient {
             // Make a create-handle request.
             HandleValue values[] = getHandleValuesFromDOI(basicDOI);
             ModifyValueRequest req = new ModifyValueRequest(Util.encodeString(handle), values, authInfo);
-            HandleResolver resolver = new HandleResolver();
+            //            HandleResolver resolver = new HandleResolver();
             AbstractResponse response = resolver.processRequest(req);
             String msg = AbstractMessage.getResponseCodeMessage(response.responseCode);
             log.debug("Response code from Handle request: " + msg);
@@ -479,4 +504,10 @@ public class HandleClient {
         this.strDOIMappingFile = strMappingFile;
     }
 
+    /**
+     * Restart the counter for suffixes
+     */
+    public void resetSuffix() {
+        this.iLastSuffix = -1;
+    }
 }

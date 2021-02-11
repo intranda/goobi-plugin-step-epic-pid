@@ -64,7 +64,7 @@ public class EpicPidPluginTest {
 
         //add handles to each physical and logical element
         HandleClient handler = new HandleClient(myconfig);
-        int i = plug.addHandle(logical, strId, true, 0, handler);
+        String strHandle = plug.addHandle(logical, strId, true, handler);
 
         //already carried out: "21.T11998/goobi-go-1296243265-1"; 
         // http://hdl.handle.net/21.T11998/goobi-go-1296243265-1
