@@ -26,6 +26,7 @@ import net.handle.hdllib.AbstractResponse;
 import net.handle.hdllib.AdminRecord;
 import net.handle.hdllib.CreateHandleRequest;
 import net.handle.hdllib.CreateHandleResponse;
+import net.handle.hdllib.DeleteHandleRequest;
 import net.handle.hdllib.Encoder;
 import net.handle.hdllib.HandleException;
 import net.handle.hdllib.HandleResolver;
@@ -63,10 +64,10 @@ public class HandleClient {
     PublicKeyAuthenticationInfo authInfo;
     private String strDOIMappingFile;
     HandleResolver resolver;
-    private ArrayList<String> lstCheckedHandles; 
+    private ArrayList<String> lstCheckedHandles;
     private int iLastSuffix;
     String tempFolder;
-    
+
     /**
      * Constructor. Note that this resets the last suffix index: if this client is used for multiple IDs, call resetSuffix() between them.
      * 
@@ -142,10 +143,8 @@ public class HandleClient {
         //create a unique suffix?
         if (boMintNewSuffix) {
             String strTestHandle = strNewHandle;
-            log.debug("Check handle " + strTestHandle);
-            while (isHandleRegistered(strTestHandle)) {
 
-                log.debug("Handle exists " + strTestHandle);
+            while (isHandleRegistered(strTestHandle)) {
                 iLastSuffix++;
                 strTestHandle = strNewHandle + "-" + iLastSuffix;
 
@@ -189,10 +188,15 @@ public class HandleClient {
 
         // Check the response to see if operation was successful
         if (response.responseCode == AbstractMessage.RC_SUCCESS) {
-            log.debug(response);
+            //            log.debug(response);
             byte[] btHandle = ((CreateHandleResponse) response).handle;
             String strFinalHandle = Util.decodeString(btHandle);
-            log.debug("Handle created: " + Util.decodeString(btHandle));
+            log.debug("Handle created: " + Util.decodeString(btHandle) + " thread " + Thread.currentThread().getId());
+
+            if (!lstCheckedHandles.contains(strNewHandle)) {
+                lstCheckedHandles.add(strNewHandle);
+            }
+
             return strFinalHandle;
         } else if (response.responseCode == AbstractMessage.RC_HANDLE_ALREADY_EXISTS) {
 
@@ -208,6 +212,9 @@ public class HandleClient {
                     byte[] btHandle = ((CreateHandleResponse) response).handle;
                     String strFinalHandle = Util.decodeString(btHandle);
                     log.debug("Handle created: " + Util.decodeString(btHandle));
+                    if (!lstCheckedHandles.contains(strFinalHandle)) {
+                        lstCheckedHandles.add(strFinalHandle);
+                    }
                     return strFinalHandle;
                 }
 
@@ -377,12 +384,12 @@ public class HandleClient {
      * 
      */
     public boolean isHandleRegistered(String handle) throws HandleException {
-        
+
         //already checked?
         if (lstCheckedHandles.contains(handle)) {
             return true;
         }
-        
+
         //otherwise check:
         boolean handleRegistered = false;
         ResolutionRequest req = buildResolutionRequest(handle);
@@ -407,7 +414,7 @@ public class HandleClient {
         if (handleRegistered) {
             lstCheckedHandles.add(handle);
         }
-        
+
         return handleRegistered;
     }
 
@@ -509,5 +516,38 @@ public class HandleClient {
      */
     public void resetSuffix() {
         this.iLastSuffix = -1;
+    }
+
+    /**
+     * Remove a handle.
+     * 
+     * @param strHandle
+     * @return true if a handle was removed, false otherwise
+     * @throws HandleException
+     */
+    public boolean remove(String strHandle) throws HandleException {
+        // Create the request to send and the resolver to send it
+        DeleteHandleRequest request = new DeleteHandleRequest(Util.encodeString(strHandle), authInfo);
+
+        HandleResolver resolver = new HandleResolver();
+        AbstractResponse response;
+
+        // Let the resolver process the request
+        response = resolver.processRequest(request);
+
+        // Check the response to see if operation was successful
+        if (response.responseCode == AbstractMessage.RC_SUCCESS) {
+
+            log.info("Handle deleted: " + strHandle);
+            System.out.println("Handle deleted: " + strHandle);
+            return true;
+        } else if (response.responseCode == AbstractMessage.RC_HANDLE_NOT_FOUND) {
+
+            log.info("Handle not found: " + strHandle);
+            System.out.println("Handle not found: " + strHandle);
+            return false;
+        } else {
+            throw new HandleException(HandleException.INTERNAL_ERROR, "Failed trying to delete a new handle at the server, response was" + response);
+        }
     }
 }

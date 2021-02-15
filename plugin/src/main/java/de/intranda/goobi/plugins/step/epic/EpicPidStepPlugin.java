@@ -2,7 +2,7 @@ package de.intranda.goobi.plugins.step.epic;
 
 import java.io.IOException;
 import java.nio.file.Paths;
-
+import java.util.ArrayList;
 
 /**
  * This file is part of a plugin for Goobi - a Workflow tool for the support of mass digitization.
@@ -24,6 +24,7 @@ import java.nio.file.Paths;
  */
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.configuration.SubnodeConfiguration;
@@ -37,6 +38,8 @@ import org.goobi.production.plugin.interfaces.IStepPluginVersion2;
 
 import de.sub.goobi.config.ConfigPlugins;
 import de.sub.goobi.helper.StorageProvider;
+import de.sub.goobi.helper.exceptions.DAOException;
+import de.sub.goobi.helper.exceptions.SwapException;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -49,6 +52,8 @@ import ugh.dl.Metadata;
 import ugh.dl.MetadataType;
 import ugh.dl.Prefs;
 import ugh.exceptions.MetadataTypeNotAllowedException;
+import ugh.exceptions.PreferencesException;
+import ugh.exceptions.WriteException;
 
 @PluginImplementation
 @Log4j2
@@ -151,7 +156,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
         if (docstruct.getAllChildren() != null) {
             // run recursive through all children
             for (DocStruct ds : docstruct.getAllChildren()) {
-               addHandle(ds, strId, false, handler);
+                addHandle(ds, strId, false, handler);
             }
         }
 
@@ -221,7 +226,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
         String strTempFolder = null;
         try {
             synchronized (this) {
-                
+
                 //read the metatdata
                 Process process = step.getProzess();
                 Prefs prefs = process.getRegelsatz().getPreferences();
@@ -238,15 +243,24 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
                 Boolean boMakeDOI = config.getBoolean("doiGenerate", false);
                 HandleClient handler = new HandleClient(config);
                 strTempFolder = handler.tempFolder;
-                try {
-                    addHandle(logical, strId, boMakeDOI,  handler);
-                } catch (HandleException e) {
-                    log.error(e.getMessage(), e);
-                }
-                try {
-                    addHandle(physical, strId, false, handler);
-                } catch (HandleException e) {
-                    log.error(e.getMessage(), e);
+
+                //remove handles?
+                if (config.getString("removeHandles", "").contentEquals(strId)) {
+
+                    removeHandlesFromProcess(fileformat, handler, process);
+
+                } else {
+                    //otherwise add handles:
+                    try {
+                        addHandle(logical, strId, boMakeDOI, handler);
+                    } catch (HandleException e) {
+                        log.error(e.getMessage(), e);
+                    }
+                    try {
+                        addHandle(physical, strId, false, handler);
+                    } catch (HandleException e) {
+                        log.error(e.getMessage(), e);
+                    }
                 }
 
                 //and save the metadata again.
@@ -267,4 +281,69 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
         }
         return PluginReturnValue.FINISH;
     }
+
+    private void removeHandlesFromProcess(Fileformat fileformat, HandleClient handler, Process process) throws PreferencesException, HandleException,
+            MetadataTypeNotAllowedException, WriteException, IOException, InterruptedException, SwapException, DAOException {
+        DigitalDocument digitalDocument = fileformat.getDigitalDocument();
+        DocStruct logical = digitalDocument.getLogicalDocStruct();
+        DocStruct physical = digitalDocument.getPhysicalDocStruct();
+
+        //find all the handles
+        ArrayList<String> lstHandles = getHandles(logical);
+        lstHandles.addAll(getHandles(physical));
+        Boolean boOk = true;
+
+        //delete all the handles
+        for (String strHandle : lstHandles) {
+            try {
+                handler.remove(strHandle);
+
+            } catch (Exception e) {
+                log.error(e.getMessage(), e);
+                boOk = false;
+            }
+        }
+
+        //delete all the metadata, but only if no errors:
+        if (boOk) {
+            Metadata md = new Metadata(urn);
+            removeHandlesFromDoc(logical, md);
+            removeHandlesFromDoc(physical, md);
+        }
+    }
+
+    private void removeHandlesFromDoc(DocStruct docstruct, Metadata md) {
+
+        //If there already is a urn, remove it first.
+        if (!docstruct.getAllMetadataByType(md.getType()).isEmpty()) {
+            docstruct.removeMetadata(docstruct.getAllMetadataByType(md.getType()).get(0));
+        }
+
+        //then for all children:
+        if (docstruct.getAllChildren() != null) {
+            // run recursive through all children
+            for (DocStruct ds : docstruct.getAllChildren()) {
+                removeHandlesFromDoc(ds, md);
+            }
+        }
+
+    }
+
+    private ArrayList<String> getHandles(DocStruct docstruct) {
+        ArrayList<String> lstHandles = new ArrayList<String>();
+        String strHandle = getHandle(docstruct);
+        if (strHandle != null) {
+            lstHandles.add(strHandle);
+        }
+
+        if (docstruct.getAllChildren() != null) {
+            // run recursive through all children
+            for (DocStruct ds : docstruct.getAllChildren()) {
+                lstHandles.addAll(getHandles(ds));
+            }
+        }
+
+        return lstHandles;
+    }
+
 }
