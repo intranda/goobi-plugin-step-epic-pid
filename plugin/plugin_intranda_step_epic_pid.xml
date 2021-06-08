@@ -24,9 +24,16 @@
 		<name>goobi</name>
 		<separator>-</separator>
 
+        <handleForLogicalDocument>true</handleForLogicalDocument>
+        <handleForPhysicalDocument>true</handleForPhysicalDocument>
+        <handleForPhysicalPages>true</<handleForPhysicalPages>>
+                
 		<!-- configuration for DOIs -->
 		<doiGenerate>true</doiGenerate>
 		<doiMapping>/opt/digiverso/goobi/config/plugin_intranda_step_epic_pid_mapping.xml</doiMapping>
+		
+
+		
 	</config>
 
 </config_plugin>

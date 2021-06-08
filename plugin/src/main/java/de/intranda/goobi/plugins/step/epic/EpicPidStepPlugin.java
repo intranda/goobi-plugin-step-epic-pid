@@ -122,7 +122,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
      * 
      * @return Returns the handle.
      */
-    public String addHandle(DocStruct docstruct, String strId, Boolean boMakeDOI, HandleClient handler)
+    public String addHandle(DocStruct docstruct, String strId, Boolean boMakeDOI, HandleClient handler, Boolean boChildren)
             throws HandleException, IOException, MetadataTypeNotAllowedException {
 
         //        HandleClient handler = new HandleClient(config);
@@ -153,10 +153,10 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
 
         setHandle(docstruct, strHandle);
 
-        if (docstruct.getAllChildren() != null) {
+        if (boChildren && docstruct.getAllChildren() != null) {
             // run recursive through all children
             for (DocStruct ds : docstruct.getAllChildren()) {
-                addHandle(ds, strId, false, handler);
+                addHandle(ds, strId, false, handler, boChildren);
             }
         }
 
@@ -251,15 +251,25 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
 
                 } else {
                     //otherwise add handles:
-                    try {
-                        addHandle(logical, strId, boMakeDOI, handler);
-                    } catch (HandleException e) {
-                        log.error(e.getMessage(), e);
+                    boolean handleForLogicalDocument = config.getBoolean("handleForLogicalDocument", true);
+                    boolean handleForPhysicalDocument = config.getBoolean("handleForPhysicalDocument", true);
+
+                    boolean boPhysicalChildren = config.getBoolean("handleForPhysicalPages", true);
+                    
+                    if (handleForLogicalDocument) {
+                        try {
+                            addHandle(logical, strId, boMakeDOI, handler, false);
+                        } catch (HandleException e) {
+                            log.error(e.getMessage(), e);
+                        }
                     }
-                    try {
-                        addHandle(physical, strId, false, handler);
-                    } catch (HandleException e) {
-                        log.error(e.getMessage(), e);
+
+                    if (handleForPhysicalDocument) {
+                        try {
+                            addHandle(physical, strId, false, handler, boPhysicalChildren);
+                        } catch (HandleException e) {
+                            log.error(e.getMessage(), e);
+                        }
                     }
                 }
 
