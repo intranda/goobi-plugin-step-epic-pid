@@ -24,8 +24,16 @@
 		<name>goobi</name>
 		<separator>-</separator>
 
+        <!-- Name of the Metadata under which the handle should be saved in the Mets-Mods file --> 
+        <handleMetadata>Handle</handleMetadata>
+        
+        <!-- Make a handle for the top logical element -->
         <handleForLogicalDocument>true</handleForLogicalDocument>
+        
+        <!-- Make a handle for each physical document -->
         <handleForPhysicalDocument>true</handleForPhysicalDocument>
+        
+        <!-- Make a handle for each physical page -->
         <handleForPhysicalPages>true</<handleForPhysicalPages>>
                 
 		<!-- configuration for DOIs -->
