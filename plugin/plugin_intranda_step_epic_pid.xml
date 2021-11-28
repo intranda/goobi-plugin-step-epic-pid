@@ -24,24 +24,22 @@
 		<name>goobi</name>
 		<separator>-</separator>
 
-        <!-- Name of the Metadata under which the handle should be saved in the Mets-Mods file --> 
-        <handleMetadata>Handle</handleMetadata>
+		<!-- Name of the Metadata under which the handle should be saved in the Mets-Mods file --> 
+		<handleMetadata>Handle</handleMetadata>
         
-        <!-- Make a handle for the top logical element -->
-        <handleForLogicalDocument>true</handleForLogicalDocument>
+		<!-- Make a handle for the top logical element -->
+		<handleForLogicalDocument>true</handleForLogicalDocument>
         
-        <!-- Make a handle for each physical document -->
-        <handleForPhysicalDocument>true</handleForPhysicalDocument>
-        
-        <!-- Make a handle for each physical page -->
-        <handleForPhysicalPages>true</<handleForPhysicalPages>>
-                
-		<!-- configuration for DOIs -->
-		<doiGenerate>true</doiGenerate>
-		<doiMapping>/opt/digiverso/goobi/config/plugin_intranda_step_epic_pid_mapping.xml</doiMapping>
-		
+		<!-- Make a handle for each physical document -->
+		<handleForPhysicalDocument>true</handleForPhysicalDocument>
 
-		
+		<!-- Make a handle for each physical page -->
+		<handleForPhysicalPages>true</handleForPhysicalPages>
+
+		<!-- configuration for DOIs -->
+		<doiGenerate>false</doiGenerate>
+		<doiMapping>/opt/digiverso/goobi/config/plugin_intranda_step_epic_pid_mapping.xml</doiMapping>
+
 	</config>
 
 </config_plugin>
