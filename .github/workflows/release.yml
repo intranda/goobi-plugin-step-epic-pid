@@ -52,3 +52,13 @@ jobs:
         asset_path: plugin/plugin_intranda_step_epic_pid_mapping.xml
         asset_name: plugin_intranda_step_epic_pid_mapping.xml
         asset_content_type: text/xml
+    - name: Upload Config asset2
+      id: upload-config-asset2
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: plugin/plugin_intranda_step_epic_pid.xml
+        asset_name: plugin_intranda_step_epic_pid.xml
+        asset_content_type: text/xml
