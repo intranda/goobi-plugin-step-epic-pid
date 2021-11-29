@@ -30,6 +30,7 @@ import java.util.List;
 import org.apache.commons.configuration.SubnodeConfiguration;
 import org.goobi.beans.Process;
 import org.goobi.beans.Step;
+import org.goobi.production.enums.LogType;
 import org.goobi.production.enums.PluginGuiType;
 import org.goobi.production.enums.PluginReturnValue;
 import org.goobi.production.enums.PluginType;
@@ -37,6 +38,7 @@ import org.goobi.production.enums.StepReturnValue;
 import org.goobi.production.plugin.interfaces.IStepPluginVersion2;
 
 import de.sub.goobi.config.ConfigPlugins;
+import de.sub.goobi.helper.Helper;
 import de.sub.goobi.helper.StorageProvider;
 import de.sub.goobi.helper.exceptions.DAOException;
 import de.sub.goobi.helper.exceptions.SwapException;
@@ -237,6 +239,10 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
                 DigitalDocument digitalDocument = fileformat.getDigitalDocument();
                 DocStruct logical = digitalDocument.getLogicalDocStruct();
                 DocStruct physical = digitalDocument.getPhysicalDocStruct();
+                // if it is an anchor record use the first child
+                if (logical.getType().isAnchor()) {
+                    logical = logical.getAllChildren().get(0);
+                }
                 String strId = getId(logical);
 
                 //add handles to each physical and logical element
@@ -246,9 +252,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
 
                 //remove handles?
                 if (config.getString("removeHandles", "").contentEquals(strId)) {
-
                     removeHandlesFromProcess(fileformat, handler, process);
-
                 } else {
                     //otherwise add handles:
                     boolean handleForLogicalDocument = config.getBoolean("handleForLogicalDocument", true);
@@ -258,7 +262,8 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
                     
                     if (handleForLogicalDocument) {
                         try {
-                            addHandle(logical, strId, boMakeDOI, handler, false);
+                            String myhandle = addHandle(logical, strId, boMakeDOI, handler, false);
+                            Helper.addMessageToProcessLog(getStep().getProcessId(), LogType.INFO, "Handle created: " + myhandle);
                         } catch (HandleException e) {
                             log.error(e.getMessage(), e);
                         }
@@ -266,19 +271,26 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
 
                     if (handleForPhysicalDocument) {
                         try {
-                            addHandle(physical, strId, false, handler, boPhysicalChildren);
+                            String myhandle = addHandle(physical, strId, false, handler, boPhysicalChildren);
+                            Helper.addMessageToProcessLog(getStep().getProcessId(), LogType.INFO, "Handle created: " + myhandle);
                         } catch (HandleException e) {
                             log.error(e.getMessage(), e);
+                            Helper.addMessageToProcessLog(getStep().getProcessId(), LogType.ERROR, "Error registering Handles: " + e.getMessage());
+                            successfull = false;
                         }
                     }
                 }
 
                 //and save the metadata again.
-                process.writeMetadataFile(fileformat);
+                if (successfull) {
+                    process.writeMetadataFile(fileformat);
+                }
             }
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
+            Helper.addMessageToProcessLog(getStep().getProcessId(), LogType.ERROR, "Error writing Handles: " + e.getMessage());
+            successfull = false;
         } finally {
             if (strTempFolder != null) {
                 StorageProvider.getInstance().deleteDataInDir(Paths.get(strTempFolder));
