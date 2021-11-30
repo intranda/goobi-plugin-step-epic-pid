@@ -28,13 +28,13 @@ import net.handle.hdllib.CreateHandleRequest;
 import net.handle.hdllib.CreateHandleResponse;
 import net.handle.hdllib.DeleteHandleRequest;
 import net.handle.hdllib.Encoder;
+import net.handle.hdllib.FilesystemConfiguration;
 import net.handle.hdllib.HandleException;
 import net.handle.hdllib.HandleResolver;
 import net.handle.hdllib.HandleValue;
 import net.handle.hdllib.ModifyValueRequest;
 import net.handle.hdllib.PublicKeyAuthenticationInfo;
 import net.handle.hdllib.ResolutionRequest;
-import net.handle.hdllib.FilesystemConfiguration;
 import net.handle.hdllib.Util;
 import ugh.dl.DocStruct;
 
@@ -88,6 +88,7 @@ public class HandleClient {
         //specify the temp folder:
         tempFolder = ConfigurationHelper.getInstance().getTemporaryFolder() + ".handles";
         net.handle.hdllib.FilesystemConfiguration handleConfig = new FilesystemConfiguration(new File(tempFolder));
+        handleConfig.setAutoUpdateRootInfo(false);
         resolver = new HandleResolver();
         resolver.setConfiguration(handleConfig);
 
@@ -312,8 +313,9 @@ public class HandleClient {
      * Change the URL for the handle. Returns true if successful, false otherwise
      */
     public Boolean changleHandleURL(String handle, String newUrl) throws HandleException {
-        if (StringUtils.isEmpty(handle) || StringUtils.isEmpty(newUrl))
+        if (StringUtils.isEmpty(handle) || StringUtils.isEmpty(newUrl)) {
             throw new IllegalArgumentException("handle and URL cannot be empty");
+        }
         log.debug("Update Handle: " + handle + " new URL: " + newUrl);
         try {
             int timestamp = (int) (System.currentTimeMillis() / 1000);
