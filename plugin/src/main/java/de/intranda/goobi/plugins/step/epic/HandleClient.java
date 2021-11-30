@@ -539,12 +539,10 @@ public class HandleClient {
         if (response.responseCode == AbstractMessage.RC_SUCCESS) {
 
             log.info("Handle deleted: " + strHandle);
-            System.out.println("Handle deleted: " + strHandle);
             return true;
         } else if (response.responseCode == AbstractMessage.RC_HANDLE_NOT_FOUND) {
 
             log.info("Handle not found: " + strHandle);
-            System.out.println("Handle not found: " + strHandle);
             return false;
         } else {
             throw new HandleException(HandleException.INTERNAL_ERROR, "Failed trying to delete a new handle at the server, response was" + response);
