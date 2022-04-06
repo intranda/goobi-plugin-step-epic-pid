@@ -17,7 +17,7 @@
 		<certificate>/opt/digiverso/goobi/config/certificate.pem</certificate>
 		<user>USER</user>
 		<base>BASE</base>
-		<url>https://viewer.goobi.io/idresolver?handle=</url>
+		<url>https://viewer.example.org/resolver?field=MD_PI_HANLDE&identifier=</url>
 
 		<!-- configuration for Handles -->
 		<prefix>go</prefix>
