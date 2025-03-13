@@ -50,7 +50,7 @@ public class EpicPidPluginTest {
 
         Prefs prefs = new Prefs();
         prefs.loadPrefs(rulesetExample);
-        plug.setUrn(prefs.getMetadataTypeByName("_urn"));
+        plug.setHandleMetadataType(prefs.getMetadataTypeByName("_urn"));
 
         //read the metatdata
         Fileformat fileformat = new MetsMods(prefs);
@@ -64,12 +64,13 @@ public class EpicPidPluginTest {
 
         //add handles to each physical and logical element
         HandleClient handler = new HandleClient(myconfig);
-        String strHandle = plug.addHandle(logical, strId, true, handler, false);
 
-        //already carried out: "21.T11998/goobi-go-1296243265-1"; 
+        String strHandle = plug.addHandle(logical, strId, handler, false);
+
+        //already carried out: "21.T11998/goobi-go-1296243265-1";
         // http://hdl.handle.net/21.T11998/goobi-go-1296243265-1
 
-//        plug.addHandle(physical, strId, true);
+        //        plug.addHandle(physical, strId, true);
 
         //            //Add DOI?
         //            if (plug.config.getBoolean("doiGenerate")) {
@@ -104,10 +105,10 @@ public class EpicPidPluginTest {
         //        //        test.changleHandleURL(strUniqueHandle, "https://www.theguardian.com/international");
         //        test.resolveRequest(strUniqueHandle);
         //
-//        test.resolveRequest("21.T11998/TEST02");
+        //        test.resolveRequest("21.T11998/TEST02");
         //        test.changleHandleURL("21.T11998/TEST02", "https://www.theguardian.com/international");
         //        test.resolveRequest("21.T11998/TEST02");
 
-        //        AddValueRequest 
+        //        AddValueRequest
     }
 }
