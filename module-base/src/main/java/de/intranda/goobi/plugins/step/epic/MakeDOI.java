@@ -62,8 +62,8 @@ public class MakeDOI {
     public MakeDOI(String strMappingFile) throws JDOMException, IOException {
         SAXBuilder builder = new SAXBuilder();
         File xmlFile = new File(strMappingFile);
-        this.mapping = (Document) builder.build(xmlFile);
-        this.doiMappings = new HashMap<String, Element>();
+        this.mapping = builder.build(xmlFile);
+        this.doiMappings = new HashMap<>();
         Element rootNode = mapping.getRootElement();
         for (Element elt : rootNode.getChildren()) {
             doiMappings.put(elt.getChildText("field"), elt);
@@ -83,10 +83,9 @@ public class MakeDOI {
             return null;
         }
 
-        ArrayList<String> lstValues = new ArrayList<String>();
         //set up the default value:
         String strDefault = eltMap.getChildText("default");
-        ArrayList<String> lstDefault = new ArrayList<String>();
+        ArrayList<String> lstDefault = new ArrayList<>();
         if (!strDefault.isEmpty()) {
             lstDefault.add(strDefault);
         }
@@ -127,7 +126,7 @@ public class MakeDOI {
      * @return
      */
     private List<String> getValueRecursive(Element root, String metadata) {
-        ArrayList<String> lstValues = new ArrayList<String>();
+        ArrayList<String> lstValues = new ArrayList<>();
         //if we find the correct named element, do NOT include its children in the search:
         if (root.getName() == metadata) {
             lstValues.add(root.getText());
@@ -153,16 +152,11 @@ public class MakeDOI {
         Element rootNew = new Element("resource");
         docEAD.setRootElement(rootNew);
         makeHeader(rootNew, strDOI);
-        SAXBuilder builder = new SAXBuilder();
-        File xmlFile = new File(strXmlFilePath);
-        Document document = (Document) builder.build(xmlFile);
-        Element rootNode = document.getRootElement();
 
         //mandatory fields:
         addMandatoryFields(rootNew);
 
         //        //optional
-        //        addOptionalFields(rootNew);
 
         //now save:
         XMLOutputter outter = new XMLOutputter();
@@ -261,7 +255,7 @@ public class MakeDOI {
      * Get the values of metadata for the specified field, in the specified struct.
      */
     private List<String> getValues(String field, DocStruct struct) {
-        ArrayList<String> lstDefault = new ArrayList<String>();
+        ArrayList<String> lstDefault = new ArrayList<>();
         String metadata = field;
         Element eltMap = doiMappings.get(field);
         if (eltMap != null) {
@@ -303,7 +297,7 @@ public class MakeDOI {
             return getPersonFromMets(struct, name);
         }
 
-        ArrayList<String> lstValues = new ArrayList<String>();
+        ArrayList<String> lstValues = new ArrayList<>();
         for (Metadata mdata : struct.getAllMetadata()) {
             if (mdata.getType().getName().equalsIgnoreCase(name)) {
                 lstValues.add(mdata.getValue());
@@ -318,7 +312,7 @@ public class MakeDOI {
             return false;
         }
 
-        return name.equalsIgnoreCase("Author") || name.equalsIgnoreCase("Publisher");
+        return "Author".equalsIgnoreCase(name) || "Publisher".equalsIgnoreCase(name);
     }
 
     /**
@@ -326,7 +320,7 @@ public class MakeDOI {
      */
     private List<String> getPersonFromMets(DocStruct struct, String name) {
 
-        ArrayList<String> lstValues = new ArrayList<String>();
+        ArrayList<String> lstValues = new ArrayList<>();
         for (Person mdata : struct.getAllPersons()) {
             if (mdata.getRole().equalsIgnoreCase(name)) {
                 String strName = mdata.getDisplayname();

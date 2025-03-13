@@ -84,7 +84,7 @@ public class HandleClient {
         this.privKey = getPemPrivateKey();
         this.authInfo = new PublicKeyAuthenticationInfo(Util.encodeString(user), ADMIN_INDEX, privKey);
 
-        this.lstCheckedHandles = new ArrayList<String>();
+        this.lstCheckedHandles = new ArrayList<>();
         //specify the temp folder:
         tempFolder = ConfigurationHelper.getInstance().getTemporaryFolder() + ".handles";
         net.handle.hdllib.FilesystemConfiguration handleConfig = new FilesystemConfiguration(new File(tempFolder));
@@ -192,7 +192,7 @@ public class HandleClient {
             //            log.debug(response);
             byte[] btHandle = ((CreateHandleResponse) response).handle;
             String strFinalHandle = Util.decodeString(btHandle);
-            log.debug("Handle created: " + Util.decodeString(btHandle) + " thread " + Thread.currentThread().getId());
+            log.debug("Handle created: " + Util.decodeString(btHandle));
 
             if (!lstCheckedHandles.contains(strNewHandle)) {
                 lstCheckedHandles.add(strNewHandle);
@@ -367,7 +367,7 @@ public class HandleClient {
         String temp = new String(keyBytes);
         String privKeyPEM = temp.replace("-----BEGIN PRIVATE KEY-----", "");
         privKeyPEM = privKeyPEM.replace("-----END PRIVATE KEY-----", "");
-        privKeyPEM = privKeyPEM.replaceAll("\r\n", "");
+        privKeyPEM = privKeyPEM.replace("\r\n", "");
         byte[] decoded = Base64.getDecoder().decode(privKeyPEM);
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(decoded);
 
@@ -465,7 +465,7 @@ public class HandleClient {
     }
 
     private HandleValue[] getHandleValuesFromDOI(BasicDoi basicDOI) throws HandleException {
-        ArrayList<HandleValue> values = new ArrayList<HandleValue>();
+        ArrayList<HandleValue> values = new ArrayList<>();
         for (Pair<String, List<String>> pair : basicDOI.getValues()) {
             int index = getIndex(pair.getLeft());
             for (String strValue : pair.getRight()) {

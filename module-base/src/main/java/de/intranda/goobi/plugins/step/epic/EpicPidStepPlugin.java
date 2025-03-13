@@ -24,7 +24,6 @@ import java.util.ArrayList;
  */
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.configuration.SubnodeConfiguration;
@@ -61,6 +60,7 @@ import ugh.exceptions.WriteException;
 @Log4j2
 public class EpicPidStepPlugin implements IStepPluginVersion2 {
 
+    private static final long serialVersionUID = 6771665909911957400L;
     @Getter
     private String title = "intranda_step_epic_pid";
     @Getter
@@ -88,7 +88,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
      */
     private String getHandle(DocStruct docstruct) {
         List<? extends Metadata> lstURN = docstruct.getAllMetadataByType(urn);
-        if (lstURN.size() == 1) {
+        if (lstURN.size() > 0) {
             return lstURN.get(0).getValue();
         }
         //otherwise
@@ -172,7 +172,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
         List<Metadata> lstMetadata = logical.getAllMetadata();
         if (lstMetadata != null) {
             for (Metadata metadata : lstMetadata) {
-                if (metadata.getType().getName().equals("CatalogIDDigital")) {
+                if ("CatalogIDDigital".equals(metadata.getType().getName())) {
                     return metadata.getValue();
                 }
             }
@@ -259,11 +259,11 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
                     boolean handleForPhysicalDocument = config.getBoolean("handleForPhysicalDocument", true);
 
                     boolean boPhysicalChildren = config.getBoolean("handleForPhysicalPages", true);
-                    
+
                     if (handleForLogicalDocument) {
                         try {
                             String myhandle = addHandle(logical, strId, boMakeDOI, handler, false);
-                            Helper.addMessageToProcessLog(getStep().getProcessId(), LogType.INFO, "Handle created: " + myhandle);
+                            Helper.addMessageToProcessJournal(getStep().getProcessId(), LogType.INFO, "Handle created: " + myhandle);
                         } catch (HandleException e) {
                             log.error(e.getMessage(), e);
                         }
@@ -272,10 +272,11 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
                     if (handleForPhysicalDocument) {
                         try {
                             String myhandle = addHandle(physical, strId, false, handler, boPhysicalChildren);
-                            Helper.addMessageToProcessLog(getStep().getProcessId(), LogType.INFO, "Handle created: " + myhandle);
+                            Helper.addMessageToProcessJournal(getStep().getProcessId(), LogType.INFO, "Handle created: " + myhandle);
                         } catch (HandleException e) {
                             log.error(e.getMessage(), e);
-                            Helper.addMessageToProcessLog(getStep().getProcessId(), LogType.ERROR, "Error registering Handles: " + e.getMessage());
+                            Helper.addMessageToProcessJournal(getStep().getProcessId(), LogType.ERROR,
+                                    "Error registering Handles: " + e.getMessage());
                             successfull = false;
                         }
                     }
@@ -289,7 +290,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
-            Helper.addMessageToProcessLog(getStep().getProcessId(), LogType.ERROR, "Error writing Handles: " + e.getMessage());
+            Helper.addMessageToProcessJournal(getStep().getProcessId(), LogType.ERROR, "Error writing Handles: " + e.getMessage());
             successfull = false;
         } finally {
             if (strTempFolder != null) {
@@ -352,7 +353,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
     }
 
     private ArrayList<String> getHandles(DocStruct docstruct) {
-        ArrayList<String> lstHandles = new ArrayList<String>();
+        ArrayList<String> lstHandles = new ArrayList<>();
         String strHandle = getHandle(docstruct);
         if (strHandle != null) {
             lstHandles.add(strHandle);
