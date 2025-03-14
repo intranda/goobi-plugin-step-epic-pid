@@ -36,6 +36,9 @@
 		<!-- Make a handle for each physical page -->
 		<handleForPhysicalPages>true</handleForPhysicalPages>
 
+        <adminIndex>300</adminIndex>
+        <adminRecordIndex>100</adminRecordIndex>
+        
 	</config>
 
 </config_plugin>
