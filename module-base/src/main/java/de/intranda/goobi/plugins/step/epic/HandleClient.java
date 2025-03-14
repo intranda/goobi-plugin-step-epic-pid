@@ -46,8 +46,8 @@ public class HandleClient {
     private String base;
     private String prefix;
     private String separator;
-    private static int ADMIN_INDEX = 300; //NOT 28!
-    private static int ADMIN_RECORD_INDEX = 100;
+    private int ADMIN_INDEX = 300; //NOT 28!
+    private int ADMIN_RECORD_INDEX = 100;
     private static int URL_RECORD_INDEX = 1;
 
     // Non-Static fields
@@ -73,7 +73,8 @@ public class HandleClient {
         this.certificate = config.getString("certificate");
         this.privKey = getPemPrivateKey();
         this.authInfo = new PublicKeyAuthenticationInfo(Util.encodeString(user), ADMIN_INDEX, privKey);
-
+        ADMIN_INDEX = config.getInt("adminIndex", 300);
+        ADMIN_RECORD_INDEX = config.getInt("adminRecordIndex", 100);
         this.lstCheckedHandles = new ArrayList<>();
         //specify the temp folder:
         tempFolder = ConfigurationHelper.getInstance().getTemporaryFolder() + ".handles";
