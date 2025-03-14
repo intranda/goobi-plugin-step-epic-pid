@@ -72,9 +72,9 @@ public class HandleClient {
         this.separator = config.getString("separator");
         this.certificate = config.getString("certificate");
         this.privKey = getPemPrivateKey();
-        this.authInfo = new PublicKeyAuthenticationInfo(Util.encodeString(user), ADMIN_INDEX, privKey);
         ADMIN_INDEX = config.getInt("adminIndex", 300);
         ADMIN_RECORD_INDEX = config.getInt("adminRecordIndex", 100);
+        this.authInfo = new PublicKeyAuthenticationInfo(Util.encodeString(user), ADMIN_INDEX, privKey);
         this.lstCheckedHandles = new ArrayList<>();
         //specify the temp folder:
         tempFolder = ConfigurationHelper.getInstance().getTemporaryFolder() + ".handles";
@@ -153,6 +153,7 @@ public class HandleClient {
 
         // Create the request to send and the resolver to send it
         log.debug("Create " + newHandle);
+
         CreateHandleRequest request = new CreateHandleRequest(Util.encodeString(newHandle), values, authInfo);
 
         //        HandleResolver resolver = new HandleResolver();
@@ -376,7 +377,7 @@ public class HandleClient {
     private ResolutionRequest buildResolutionRequest(final String handle) throws HandleException {
         //find auth info for the whole domain:
         String handlePrefix = handle.substring(0, handle.indexOf("/"));
-        PublicKeyAuthenticationInfo auth = new PublicKeyAuthenticationInfo(Util.encodeString(handlePrefix), 300, privKey);
+        PublicKeyAuthenticationInfo auth = new PublicKeyAuthenticationInfo(Util.encodeString(handlePrefix), ADMIN_INDEX, privKey);
 
         byte[][] types = null;
         int[] indexes = null;
