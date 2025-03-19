@@ -235,7 +235,6 @@ public class HandleClient {
 
         // Define the admin record for the handle we want to create
         AdminRecord admin = createAdminRecord(user, ADMIN_INDEX);
-
         // Make a create-handle request.
         HandleValue values[] = { new HandleValue(ADMIN_RECORD_INDEX, // unique index
                 Util.encodeString("HS_ADMIN"), // handle value type
@@ -300,10 +299,42 @@ public class HandleClient {
      * @param idx the handle index the of the NA handle's HS_VLIST entry
      */
     public AdminRecord createAdminRecord(String handle, int idx) {
-        return new AdminRecord(Util.encodeString(handle), idx, AdminRecord.PRM_ADD_HANDLE, AdminRecord.PRM_DELETE_HANDLE, AdminRecord.PRM_NO_ADD_NA,
-                AdminRecord.PRM_NO_DELETE_NA, AdminRecord.PRM_READ_VALUE, AdminRecord.PRM_MODIFY_VALUE, AdminRecord.PRM_REMOVE_VALUE,
-                AdminRecord.PRM_ADD_VALUE, AdminRecord.PRM_MODIFY_ADMIN, AdminRecord.PRM_REMOVE_ADMIN, AdminRecord.PRM_ADD_ADMIN,
-                AdminRecord.PRM_LIST_HANDLES);
+
+        AdminRecord adm = new AdminRecord();
+        adm.adminId = Util.encodeString(handle);
+        adm.adminIdIndex = idx;
+
+        adm.perms[AdminRecord.ADD_HANDLE] = true;
+        adm.perms[AdminRecord.DELETE_HANDLE] = true;
+
+        adm.perms[AdminRecord.ADD_DERIVED_PREFIX] = false;
+        adm.perms[AdminRecord.DELETE_DERIVED_PREFIX] = false;
+
+        adm.perms[AdminRecord.LIST_HANDLES] = false;
+
+        adm.perms[AdminRecord.READ_VALUE] = true;
+        adm.perms[AdminRecord.MODIFY_VALUE] = false;
+        adm.perms[AdminRecord.REMOVE_VALUE] = true;
+        adm.perms[AdminRecord.ADD_VALUE] = true;
+
+        adm.perms[AdminRecord.MODIFY_ADMIN] = false;
+        adm.perms[AdminRecord.REMOVE_ADMIN] = false;
+        adm.perms[AdminRecord.ADD_ADMIN] = false;
+        return adm;
+        //        return new AdminRecord(Util.encodeString(handle), idx,
+        //                true, // addHandle
+        //                true, // deleteHandle
+        //                false, // addNA
+        //                false, // deleteNA
+        //                false, // modifyValue
+        //                true, // removeValue
+        //                true, // addValue
+        //                false, //modifyAdmin
+        //                false, //removeAdmin
+        //                false, //addAdmin
+        //                true, // readValue
+        //                false);
+
     }
 
     /**
