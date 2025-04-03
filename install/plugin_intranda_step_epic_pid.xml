@@ -17,7 +17,7 @@
 		<certificate>/opt/digiverso/goobi/config/certificate.pem</certificate>
 		<user>USER</user>
 		<base>BASE</base>
-		<url>https://viewer.example.org/resolver?field=MD_PI_HANLDE&identifier=</url>
+		<url>https://viewer.example.org/resolver?field=MD_PI_HANLDE&amp;identifier=</url>
 
 		<!-- configuration for Handles -->
 		<prefix>go</prefix>
@@ -36,10 +36,9 @@
 		<!-- Make a handle for each physical page -->
 		<handleForPhysicalPages>true</handleForPhysicalPages>
 
-		<!-- configuration for DOIs -->
-		<doiGenerate>false</doiGenerate>
-		<doiMapping>/opt/digiverso/goobi/config/plugin_intranda_step_epic_pid_mapping.xml</doiMapping>
-
+        <adminIndex>300</adminIndex>
+        <adminRecordIndex>100</adminRecordIndex>
+        
 	</config>
 
 </config_plugin>

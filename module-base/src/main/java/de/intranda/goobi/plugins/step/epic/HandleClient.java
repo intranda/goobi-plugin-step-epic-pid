@@ -11,13 +11,9 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.List;
 
 import org.apache.commons.configuration.SubnodeConfiguration;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
-import org.jdom2.JDOMException;
 
 import de.sub.goobi.config.ConfigurationHelper;
 import lombok.extern.log4j.Log4j;
@@ -50,19 +46,13 @@ public class HandleClient {
     private String base;
     private String prefix;
     private String separator;
-    private static int ADMIN_INDEX = 300; //NOT 28!
-    private static int ADMIN_RECORD_INDEX = 100;
+    private int ADMIN_INDEX = 300; //NOT 28!
+    private int ADMIN_RECORD_INDEX = 100;
     private static int URL_RECORD_INDEX = 1;
-    private static int TITLE_INDEX = 2;
-    private static int AUTHORS_INDEX = 3;
-    private static int PUBLISHER_INDEX = 4;
-    private static int PUBDATE_INDEX = 5;
-    private static int INST_INDEX = 6;
 
     // Non-Static fields
     private PrivateKey privKey;
     PublicKeyAuthenticationInfo authInfo;
-    private String strDOIMappingFile;
     HandleResolver resolver;
     private ArrayList<String> lstCheckedHandles;
     private int iLastSuffix;
@@ -82,9 +72,10 @@ public class HandleClient {
         this.separator = config.getString("separator");
         this.certificate = config.getString("certificate");
         this.privKey = getPemPrivateKey();
+        ADMIN_INDEX = config.getInt("adminIndex", 300);
+        ADMIN_RECORD_INDEX = config.getInt("adminRecordIndex", 100);
         this.authInfo = new PublicKeyAuthenticationInfo(Util.encodeString(user), ADMIN_INDEX, privKey);
-
-        this.lstCheckedHandles = new ArrayList<String>();
+        this.lstCheckedHandles = new ArrayList<>();
         //specify the temp folder:
         tempFolder = ConfigurationHelper.getInstance().getTemporaryFolder() + ".handles";
         net.handle.hdllib.FilesystemConfiguration handleConfig = new FilesystemConfiguration(new File(tempFolder));
@@ -99,20 +90,11 @@ public class HandleClient {
      * Given an object with specified ID and postfix, make a handle "base/postfix_id" with URL given in getURLForHandle. Returns the new Handle.
      * 
      */
-    public String makeURLHandleForObject(String strObjectId, String strPostfix, Boolean boMakeDOI, DocStruct docstruct) throws HandleException {
-        BasicDoi basicDOI = null;
-        if (boMakeDOI) {
-            try {
-                MakeDOI makeDOI = new MakeDOI(strDOIMappingFile);
-                basicDOI = makeDOI.getBasicDoi(docstruct);
-            } catch (Exception e) {
-                throw new HandleException(0, e.getMessage());
-            }
-        }
+    public String makeURLHandleForObject(String strObjectId, String strPostfix, DocStruct docstruct) throws HandleException {
 
-        String strNewHandle = newURLHandle(base + "/" + strPostfix + strObjectId, prefix, separator, true, boMakeDOI, basicDOI);
+        String strNewHandle = newURLHandle(base + "/" + strPostfix + strObjectId, prefix, separator, true);
         String strNewURL = getURLForHandle(strNewHandle);
-        if (changleHandleURL(strNewHandle, strNewURL)) {
+        if (changeHandleURL(strNewHandle, strNewURL)) {
             return strNewHandle;
         } else {
             throw new HandleException(HandleException.INTERNAL_ERROR, "Failed to create new Handle for " + strObjectId);
@@ -123,40 +105,38 @@ public class HandleClient {
     /**
      * Make a new handle with specified URL. If boMintNewSuffix, add a suffix guaranteeing uniquness. Retuns the new handle.
      * 
-     * @param strNewHandle
+     * @param newHandle
      * @param url
      * @param separator
-     * @param boMintNewSuffix
-     * @param boMakeDOI
-     * @param basicDOI
+     * @param mintNewSuffix
      * @return
      * @throws HandleException
      */
-    public String newURLHandle(String strNewHandle, String url, String separator, Boolean boMintNewSuffix, Boolean boMakeDOI, BasicDoi basicDOI)
+    public String newURLHandle(String newHandle, String url, String separator, boolean mintNewSuffix)
             throws HandleException {
 
-        if (!boMintNewSuffix && isHandleRegistered(strNewHandle)) {
-            return strNewHandle;
+        if (!mintNewSuffix && isHandleRegistered(newHandle)) {
+            return newHandle;
         }
 
-        String strOrig = strNewHandle;
+        String oldHandle = newHandle;
 
         //create a unique suffix?
-        if (boMintNewSuffix) {
-            String strTestHandle = strNewHandle;
+        if (mintNewSuffix) {
+            String strTestHandle = newHandle;
 
             while (isHandleRegistered(strTestHandle)) {
                 iLastSuffix++;
-                strTestHandle = strNewHandle + "-" + iLastSuffix;
+                strTestHandle = newHandle + "-" + iLastSuffix;
 
                 if (iLastSuffix > 5000) {
-                    throw new HandleException(HandleException.INTERNAL_ERROR, "Registry query always returning true: " + strNewHandle);
+                    throw new HandleException(HandleException.INTERNAL_ERROR, "Registry query always returning true: " + newHandle);
                 }
             }
 
             //test handle ok:
             log.debug("Handle OK " + strTestHandle);
-            strNewHandle = strTestHandle;
+            newHandle = strTestHandle;
         }
 
         // Define the admin record for the handle we want to create
@@ -171,15 +151,10 @@ public class HandleClient {
                         "URL", // handle value type
                         url) }; //data
 
-        //add DOI info?
-        if (boMakeDOI) {
-            HandleValue valuesDOI[] = getHandleValuesFromDOI(basicDOI);
-            values = (HandleValue[]) ArrayUtils.addAll(values, valuesDOI);
-        }
-
         // Create the request to send and the resolver to send it
-        log.debug("Create " + strNewHandle);
-        CreateHandleRequest request = new CreateHandleRequest(Util.encodeString(strNewHandle), values, authInfo);
+        log.debug("Create " + newHandle);
+
+        CreateHandleRequest request = new CreateHandleRequest(Util.encodeString(newHandle), values, authInfo);
 
         //        HandleResolver resolver = new HandleResolver();
         AbstractResponse response;
@@ -192,10 +167,10 @@ public class HandleClient {
             //            log.debug(response);
             byte[] btHandle = ((CreateHandleResponse) response).handle;
             String strFinalHandle = Util.decodeString(btHandle);
-            log.debug("Handle created: " + Util.decodeString(btHandle) + " thread " + Thread.currentThread().getId());
+            log.debug("Handle created: " + Util.decodeString(btHandle));
 
-            if (!lstCheckedHandles.contains(strNewHandle)) {
-                lstCheckedHandles.add(strNewHandle);
+            if (!lstCheckedHandles.contains(newHandle)) {
+                lstCheckedHandles.add(newHandle);
             }
 
             return strFinalHandle;
@@ -203,7 +178,7 @@ public class HandleClient {
 
             while (response.responseCode == AbstractMessage.RC_HANDLE_ALREADY_EXISTS) {
                 iLastSuffix++;
-                String strNext = strOrig + "-" + iLastSuffix;
+                String strNext = oldHandle + "-" + iLastSuffix;
                 log.debug("Create 2 " + strNext);
                 CreateHandleRequest request2 = new CreateHandleRequest(Util.encodeString(strNext), values, authInfo);
                 // Let the resolver process the request
@@ -221,7 +196,7 @@ public class HandleClient {
 
                 if (iLastSuffix > 5000) {
                     throw new HandleException(HandleException.INTERNAL_ERROR,
-                            "Failed trying to create handle at the server, response was" + response + " " + strNewHandle);
+                            "Failed trying to create handle at the server, response was" + response + " " + newHandle);
                 }
             }
         }
@@ -229,7 +204,7 @@ public class HandleClient {
         //otherwise:
 
         throw new HandleException(HandleException.INTERNAL_ERROR,
-                "Failed trying to create a new handle at the server, response was" + response + " " + strNewHandle);
+                "Failed trying to create a new handle at the server, response was" + response + " " + newHandle);
 
     }
 
@@ -238,45 +213,28 @@ public class HandleClient {
     }
 
     /**
-     * Given an object with specified handle, update the URL (and if required DOI)
+     * Given an object with specified handle, update the URL
      * 
      */
-    public void updateURLHandleForObject(String handle, String strPostfix, Boolean boMakeDOI, DocStruct docstruct) throws HandleException {
-        BasicDoi basicDOI = null;
-        if (boMakeDOI) {
-            try {
-                MakeDOI makeDOI = new MakeDOI(strDOIMappingFile);
-                basicDOI = makeDOI.getBasicDoi(docstruct);
-            } catch (Exception e) {
-                throw new HandleException(0, e.getMessage());
-            }
-        }
+    public void updateURLHandleForObject(String handle, String strPostfix, DocStruct docstruct) throws HandleException {
 
         String strNewURL = getURLForHandle(handle);
-        changleHandleURL(handle, strNewURL);
+        changeHandleURL(handle, strNewURL);
 
-        if (boMakeDOI) {
-            updateHandleDOI(handle, strNewURL, basicDOI);
-        }
     }
 
     /**
      * Make a new handle with specified URL. If boMintNewSuffix, add a suffix guaranteeing uniquness. Retuns the new handle.
      * 
-     * @param strNewHandle
+     * @param handle
      * @param url
-     * @param separator
-     * @param boMintNewSuffix
-     * @param boMakeDOI
-     * @param basicDOI
      * @return
      * @throws HandleException
      */
-    public Boolean updateHandleDOI(String handle, String url, BasicDoi basicDOI) throws HandleException {
+    public boolean updateHandle(String handle, String url) throws HandleException {
 
         // Define the admin record for the handle we want to create
         AdminRecord admin = createAdminRecord(user, ADMIN_INDEX);
-
         // Make a create-handle request.
         HandleValue values[] = { new HandleValue(ADMIN_RECORD_INDEX, // unique index
                 Util.encodeString("HS_ADMIN"), // handle value type
@@ -286,14 +244,9 @@ public class HandleClient {
                         "URL", // handle value type
                         url) }; //data
 
-        //add DOI info
-        HandleValue valuesDOI[] = getHandleValuesFromDOI(basicDOI);
-        values = (HandleValue[]) ArrayUtils.addAll(values, valuesDOI);
-
         // Create the request to send and the resolver to send it
         ModifyValueRequest request = new ModifyValueRequest(Util.encodeString(handle), values, authInfo);
 
-        //        HandleResolver resolver = new HandleResolver();
         AbstractResponse response;
 
         // Let the resolver process the request
@@ -312,7 +265,7 @@ public class HandleClient {
     /**
      * Change the URL for the handle. Returns true if successful, false otherwise
      */
-    public Boolean changleHandleURL(String handle, String newUrl) throws HandleException {
+    public boolean changeHandleURL(String handle, String newUrl) throws HandleException {
         if (StringUtils.isEmpty(handle) || StringUtils.isEmpty(newUrl)) {
             throw new IllegalArgumentException("handle and URL cannot be empty");
         }
@@ -346,10 +299,42 @@ public class HandleClient {
      * @param idx the handle index the of the NA handle's HS_VLIST entry
      */
     public AdminRecord createAdminRecord(String handle, int idx) {
-        return new AdminRecord(Util.encodeString(handle), idx, AdminRecord.PRM_ADD_HANDLE, AdminRecord.PRM_DELETE_HANDLE, AdminRecord.PRM_NO_ADD_NA,
-                AdminRecord.PRM_NO_DELETE_NA, AdminRecord.PRM_READ_VALUE, AdminRecord.PRM_MODIFY_VALUE, AdminRecord.PRM_REMOVE_VALUE,
-                AdminRecord.PRM_ADD_VALUE, AdminRecord.PRM_MODIFY_ADMIN, AdminRecord.PRM_REMOVE_ADMIN, AdminRecord.PRM_ADD_ADMIN,
-                AdminRecord.PRM_LIST_HANDLES);
+
+        AdminRecord adm = new AdminRecord();
+        adm.adminId = Util.encodeString(handle);
+        adm.adminIdIndex = idx;
+
+        adm.perms[AdminRecord.ADD_HANDLE] = true;
+        adm.perms[AdminRecord.DELETE_HANDLE] = true;
+
+        adm.perms[AdminRecord.ADD_DERIVED_PREFIX] = false;
+        adm.perms[AdminRecord.DELETE_DERIVED_PREFIX] = false;
+
+        adm.perms[AdminRecord.LIST_HANDLES] = false;
+
+        adm.perms[AdminRecord.READ_VALUE] = true;
+        adm.perms[AdminRecord.MODIFY_VALUE] = false;
+        adm.perms[AdminRecord.REMOVE_VALUE] = true;
+        adm.perms[AdminRecord.ADD_VALUE] = true;
+
+        adm.perms[AdminRecord.MODIFY_ADMIN] = false;
+        adm.perms[AdminRecord.REMOVE_ADMIN] = false;
+        adm.perms[AdminRecord.ADD_ADMIN] = false;
+        return adm;
+        //        return new AdminRecord(Util.encodeString(handle), idx,
+        //                true, // addHandle
+        //                true, // deleteHandle
+        //                false, // addNA
+        //                false, // deleteNA
+        //                false, // modifyValue
+        //                true, // removeValue
+        //                true, // addValue
+        //                false, //modifyAdmin
+        //                false, //removeAdmin
+        //                false, //addAdmin
+        //                true, // readValue
+        //                false);
+
     }
 
     /**
@@ -367,7 +352,7 @@ public class HandleClient {
         String temp = new String(keyBytes);
         String privKeyPEM = temp.replace("-----BEGIN PRIVATE KEY-----", "");
         privKeyPEM = privKeyPEM.replace("-----END PRIVATE KEY-----", "");
-        privKeyPEM = privKeyPEM.replaceAll("\r\n", "");
+        privKeyPEM = privKeyPEM.replace("\r\n", "");
         byte[] decoded = Base64.getDecoder().decode(privKeyPEM);
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(decoded);
 
@@ -423,7 +408,7 @@ public class HandleClient {
     private ResolutionRequest buildResolutionRequest(final String handle) throws HandleException {
         //find auth info for the whole domain:
         String handlePrefix = handle.substring(0, handle.indexOf("/"));
-        PublicKeyAuthenticationInfo auth = new PublicKeyAuthenticationInfo(Util.encodeString(handlePrefix), 300, privKey);
+        PublicKeyAuthenticationInfo auth = new PublicKeyAuthenticationInfo(Util.encodeString(handlePrefix), ADMIN_INDEX, privKey);
 
         byte[][] types = null;
         int[] indexes = null;
@@ -436,84 +421,6 @@ public class HandleClient {
     }
 
     /**
-     * Create a DOI (with basic information) for the docstruct, and update the corresponding handle with the DOI info.
-     */
-    public Boolean addDOI(DocStruct physical, String handle) throws JDOMException, IOException, HandleException {
-        if (StringUtils.isEmpty(handle)) {
-            throw new IllegalArgumentException("URL cannot be empty");
-        }
-        log.debug("Update Handle: " + handle + ". Generating DOI.");
-        try {
-            MakeDOI makeDOI = new MakeDOI(strDOIMappingFile);
-            BasicDoi basicDOI = makeDOI.getBasicDoi(physical);
-
-            // Make a create-handle request.
-            HandleValue values[] = getHandleValuesFromDOI(basicDOI);
-            ModifyValueRequest req = new ModifyValueRequest(Util.encodeString(handle), values, authInfo);
-            //            HandleResolver resolver = new HandleResolver();
-            AbstractResponse response = resolver.processRequest(req);
-            String msg = AbstractMessage.getResponseCodeMessage(response.responseCode);
-            log.debug("Response code from Handle request: " + msg);
-            if (response.responseCode != AbstractMessage.RC_SUCCESS) {
-                return false;
-            }
-        } catch (HandleException e) {
-            log.error("Tried to update handle " + handle + " but failed", e);
-            throw e;
-        }
-        return true;
-    }
-
-    private HandleValue[] getHandleValuesFromDOI(BasicDoi basicDOI) throws HandleException {
-        ArrayList<HandleValue> values = new ArrayList<HandleValue>();
-        for (Pair<String, List<String>> pair : basicDOI.getValues()) {
-            int index = getIndex(pair.getLeft());
-            for (String strValue : pair.getRight()) {
-                values.add(new HandleValue(index, pair.getLeft(), strValue));
-            }
-        }
-
-        int timestamp = (int) (System.currentTimeMillis() / 1000);
-        for (HandleValue handleValue : values) {
-            handleValue.setTimestamp(timestamp);
-        }
-        return values.toArray(new HandleValue[0]);
-    }
-
-    /**
-     * Get the index in the handle for the specified field type.
-     * 
-     * @param strType
-     * @return
-     * @throws HandleException
-     */
-    private int getIndex(String strType) throws HandleException {
-        switch (strType) {
-            case "TITLE":
-                return TITLE_INDEX;
-            case "AUTHORS":
-                return AUTHORS_INDEX;
-            case "PUBLISHER":
-                return PUBLISHER_INDEX;
-            case "PUBDATE":
-                return PUBDATE_INDEX;
-            case "INST":
-                return INST_INDEX;
-            default:
-                throw new HandleException(0);
-        }
-    }
-
-    /**
-     * Setter
-     * 
-     * @param strMappingFile
-     */
-    public void setDOIMappingFile(String strMappingFile) {
-        this.strDOIMappingFile = strMappingFile;
-    }
-
-    /**
      * Restart the counter for suffixes
      */
     public void resetSuffix() {
@@ -523,13 +430,13 @@ public class HandleClient {
     /**
      * Remove a handle.
      * 
-     * @param strHandle
+     * @param handle
      * @return true if a handle was removed, false otherwise
      * @throws HandleException
      */
-    public boolean remove(String strHandle) throws HandleException {
+    public boolean remove(String handle) throws HandleException {
         // Create the request to send and the resolver to send it
-        DeleteHandleRequest request = new DeleteHandleRequest(Util.encodeString(strHandle), authInfo);
+        DeleteHandleRequest request = new DeleteHandleRequest(Util.encodeString(handle), authInfo);
 
         HandleResolver resolver = new HandleResolver();
         AbstractResponse response;
@@ -540,11 +447,11 @@ public class HandleClient {
         // Check the response to see if operation was successful
         if (response.responseCode == AbstractMessage.RC_SUCCESS) {
 
-            log.info("Handle deleted: " + strHandle);
+            log.info("Handle deleted: " + handle);
             return true;
         } else if (response.responseCode == AbstractMessage.RC_HANDLE_NOT_FOUND) {
 
-            log.info("Handle not found: " + strHandle);
+            log.info("Handle not found: " + handle);
             return false;
         } else {
             throw new HandleException(HandleException.INTERNAL_ERROR, "Failed trying to delete a new handle at the server, response was" + response);

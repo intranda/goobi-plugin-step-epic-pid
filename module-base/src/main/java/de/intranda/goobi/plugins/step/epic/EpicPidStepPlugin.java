@@ -24,7 +24,6 @@ import java.util.ArrayList;
  */
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.configuration.SubnodeConfiguration;
@@ -54,13 +53,13 @@ import ugh.dl.Metadata;
 import ugh.dl.MetadataType;
 import ugh.dl.Prefs;
 import ugh.exceptions.MetadataTypeNotAllowedException;
-import ugh.exceptions.PreferencesException;
-import ugh.exceptions.WriteException;
+import ugh.exceptions.UGHException;
 
 @PluginImplementation
 @Log4j2
 public class EpicPidStepPlugin implements IStepPluginVersion2 {
 
+    private static final long serialVersionUID = 6771665909911957400L;
     @Getter
     private String title = "intranda_step_epic_pid";
     @Getter
@@ -71,7 +70,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
     private SubnodeConfiguration config;
     @Getter
     @Setter
-    private MetadataType urn;
+    private MetadataType handleMetadataType;
 
     @Override
     public void initialize(Step step, String returnPath) {
@@ -87,9 +86,9 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
      * If the element already has a handle, return it, otherwise return null.
      */
     private String getHandle(DocStruct docstruct) {
-        List<? extends Metadata> lstURN = docstruct.getAllMetadataByType(urn);
-        if (lstURN.size() == 1) {
-            return lstURN.get(0).getValue();
+        List<? extends Metadata> metadata = docstruct.getAllMetadataByType(handleMetadataType);
+        if (!metadata.isEmpty()) {
+            return metadata.get(0).getValue();
         }
         //otherwise
         return null;
@@ -100,14 +99,14 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
      * 
      * @throws HandleException
      */
-    private void setHandle(DocStruct docstruct, String strHandle) throws MetadataTypeNotAllowedException, HandleException {
+    private void setHandle(DocStruct docstruct, String handle) throws MetadataTypeNotAllowedException, HandleException {
 
-        if (strHandle == null || strHandle.isEmpty()) {
+        if (handle == null || handle.isEmpty()) {
             throw new HandleException(0, "Handle is null or empty");
         }
 
-        Metadata md = new Metadata(urn);
-        md.setValue(strHandle);
+        Metadata md = new Metadata(handleMetadataType);
+        md.setValue(handle);
 
         //If there already is a urn, remove it first.
         if (!docstruct.getAllMetadataByType(md.getType()).isEmpty()) {
@@ -124,17 +123,12 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
      * 
      * @return Returns the handle.
      */
-    public String addHandle(DocStruct docstruct, String strId, Boolean boMakeDOI, HandleClient handler, Boolean boChildren)
+    public String addHandle(DocStruct docstruct, String id, HandleClient handler, boolean includeChildren)
             throws HandleException, IOException, MetadataTypeNotAllowedException {
 
         //        HandleClient handler = new HandleClient(config);
         //already has a handle?
-        String strHandle = getHandle(docstruct);
-
-        //if not, make one.
-        if (boMakeDOI) {
-            handler.setDOIMappingFile(config.getString("doiMapping", null));
-        }
+        String handle = getHandle(docstruct);
 
         String name = config.getString("name");
         String prefix = config.getString("prefix");
@@ -147,22 +141,22 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
             strPostfix += name + separator;
         }
 
-        if (strHandle == null) {
-            strHandle = handler.makeURLHandleForObject(strId, strPostfix, boMakeDOI, docstruct);
+        if (handle == null) {
+            handle = handler.makeURLHandleForObject(id, strPostfix, docstruct);
         } else {
-            handler.updateURLHandleForObject(strHandle, strPostfix, boMakeDOI, docstruct);
+            handler.updateURLHandleForObject(handle, strPostfix, docstruct);
         }
 
-        setHandle(docstruct, strHandle);
+        setHandle(docstruct, handle);
 
-        if (boChildren && docstruct.getAllChildren() != null) {
+        if (includeChildren && docstruct.getAllChildren() != null) {
             // run recursive through all children
             for (DocStruct ds : docstruct.getAllChildren()) {
-                addHandle(ds, strId, false, handler, boChildren);
+                addHandle(ds, id, handler, includeChildren);
             }
         }
 
-        return strHandle;
+        return handle;
     }
 
     /**
@@ -172,7 +166,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
         List<Metadata> lstMetadata = logical.getAllMetadata();
         if (lstMetadata != null) {
             for (Metadata metadata : lstMetadata) {
-                if (metadata.getType().getName().equals("CatalogIDDigital")) {
+                if ("CatalogIDDigital".equals(metadata.getType().getName())) {
                     return metadata.getValue();
                 }
             }
@@ -225,15 +219,15 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
     @Override
     public PluginReturnValue run() {
         boolean successfull = true;
-        String strTempFolder = null;
+        String tempFolder = null;
         try {
             synchronized (this) {
 
                 //read the metatdata
                 Process process = step.getProzess();
                 Prefs prefs = process.getRegelsatz().getPreferences();
-                String strUrn = config.getString("handleMetadata", "_urn");
-                urn = prefs.getMetadataTypeByName(strUrn);
+                String handleMetadata = config.getString("handleMetadata", "_urn");
+                handleMetadataType = prefs.getMetadataTypeByName(handleMetadata);
                 Fileformat fileformat = process.readMetadataFile();
 
                 DigitalDocument digitalDocument = fileformat.getDigitalDocument();
@@ -243,27 +237,26 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
                 if (logical.getType().isAnchor()) {
                     logical = logical.getAllChildren().get(0);
                 }
-                String strId = getId(logical);
+                String identifier = getId(logical);
 
                 //add handles to each physical and logical element
-                Boolean boMakeDOI = config.getBoolean("doiGenerate", false);
                 HandleClient handler = new HandleClient(config);
-                strTempFolder = handler.tempFolder;
+                tempFolder = handler.tempFolder;
 
                 //remove handles?
-                if (config.getString("removeHandles", "").contentEquals(strId)) {
+                if (config.getString("removeHandles", "").contentEquals(identifier)) {
                     removeHandlesFromProcess(fileformat, handler, process);
                 } else {
                     //otherwise add handles:
                     boolean handleForLogicalDocument = config.getBoolean("handleForLogicalDocument", true);
                     boolean handleForPhysicalDocument = config.getBoolean("handleForPhysicalDocument", true);
 
-                    boolean boPhysicalChildren = config.getBoolean("handleForPhysicalPages", true);
-                    
+                    boolean handleForPhysicalChildren = config.getBoolean("handleForPhysicalPages", true);
+
                     if (handleForLogicalDocument) {
                         try {
-                            String myhandle = addHandle(logical, strId, boMakeDOI, handler, false);
-                            Helper.addMessageToProcessLog(getStep().getProcessId(), LogType.INFO, "Handle created: " + myhandle);
+                            String myhandle = addHandle(logical, identifier, handler, false);
+                            Helper.addMessageToProcessJournal(getStep().getProcessId(), LogType.INFO, "Handle created: " + myhandle);
                         } catch (HandleException e) {
                             log.error(e.getMessage(), e);
                         }
@@ -271,11 +264,12 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
 
                     if (handleForPhysicalDocument) {
                         try {
-                            String myhandle = addHandle(physical, strId, false, handler, boPhysicalChildren);
-                            Helper.addMessageToProcessLog(getStep().getProcessId(), LogType.INFO, "Handle created: " + myhandle);
+                            String myhandle = addHandle(physical, identifier, handler, handleForPhysicalChildren);
+                            Helper.addMessageToProcessJournal(getStep().getProcessId(), LogType.INFO, "Handle created: " + myhandle);
                         } catch (HandleException e) {
                             log.error(e.getMessage(), e);
-                            Helper.addMessageToProcessLog(getStep().getProcessId(), LogType.ERROR, "Error registering Handles: " + e.getMessage());
+                            Helper.addMessageToProcessJournal(getStep().getProcessId(), LogType.ERROR,
+                                    "Error registering Handles: " + e.getMessage());
                             successfull = false;
                         }
                     }
@@ -289,11 +283,11 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);
-            Helper.addMessageToProcessLog(getStep().getProcessId(), LogType.ERROR, "Error writing Handles: " + e.getMessage());
+            Helper.addMessageToProcessJournal(getStep().getProcessId(), LogType.ERROR, "Error writing Handles: " + e.getMessage());
             successfull = false;
         } finally {
-            if (strTempFolder != null) {
-                StorageProvider.getInstance().deleteDataInDir(Paths.get(strTempFolder));
+            if (tempFolder != null) {
+                StorageProvider.getInstance().deleteDataInDir(Paths.get(tempFolder));
             }
         }
 
@@ -304,16 +298,16 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
         return PluginReturnValue.FINISH;
     }
 
-    private void removeHandlesFromProcess(Fileformat fileformat, HandleClient handler, Process process) throws PreferencesException, HandleException,
-            MetadataTypeNotAllowedException, WriteException, IOException, InterruptedException, SwapException, DAOException {
+    private void removeHandlesFromProcess(Fileformat fileformat, HandleClient handler, Process process) throws UGHException, HandleException,
+            IOException, InterruptedException, SwapException, DAOException {
         DigitalDocument digitalDocument = fileformat.getDigitalDocument();
         DocStruct logical = digitalDocument.getLogicalDocStruct();
         DocStruct physical = digitalDocument.getPhysicalDocStruct();
 
         //find all the handles
-        ArrayList<String> lstHandles = getHandles(logical);
+        List<String> lstHandles = getHandles(logical);
         lstHandles.addAll(getHandles(physical));
-        Boolean boOk = true;
+        boolean successful = true;
 
         //delete all the handles
         for (String strHandle : lstHandles) {
@@ -322,13 +316,13 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
 
             } catch (Exception e) {
                 log.error(e.getMessage(), e);
-                boOk = false;
+                successful = false;
             }
         }
 
         //delete all the metadata, but only if no errors:
-        if (boOk) {
-            Metadata md = new Metadata(urn);
+        if (successful) {
+            Metadata md = new Metadata(handleMetadataType);
             removeHandlesFromDoc(logical, md);
             removeHandlesFromDoc(physical, md);
         }
@@ -336,7 +330,7 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
 
     private void removeHandlesFromDoc(DocStruct docstruct, Metadata md) {
 
-        //If there already is a urn, remove it first.
+        //If there already is a handle, remove it first.
         if (!docstruct.getAllMetadataByType(md.getType()).isEmpty()) {
             docstruct.removeMetadata(docstruct.getAllMetadataByType(md.getType()).get(0));
         }
@@ -351,8 +345,8 @@ public class EpicPidStepPlugin implements IStepPluginVersion2 {
 
     }
 
-    private ArrayList<String> getHandles(DocStruct docstruct) {
-        ArrayList<String> lstHandles = new ArrayList<String>();
+    private List<String> getHandles(DocStruct docstruct) {
+        List<String> lstHandles = new ArrayList<>();
         String strHandle = getHandle(docstruct);
         if (strHandle != null) {
             lstHandles.add(strHandle);
