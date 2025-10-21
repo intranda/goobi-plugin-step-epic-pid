@@ -3,6 +3,10 @@ title: ePIC PID Registrierung (Handle & DOI)
 identifier: intranda_step_epic_pid
 published: true
 description: Dieses Step Plugin erlaubt die Registrierung von Handle und DOI als Persistente Identifier über den ePIC Service der GWDG.
+keywords:
+    - Goobi workflow
+    - Plugin
+    - Step Plugin
 ---
 ## Einführung
 Das Plugin erlaubt eine Registrierung von Digitalisaten beim [ePIC Service der GWDG](https://www.gwdg.de/de/application-services/persistent-identifier-pid). Hierbei ist sowohl die Erzeugung von Handle-IDs als auch die Registrierung von DOI möglich. Die Handles können dabei für jedes logische und physische Element eines METS-Datei erzeugt und jeweils darin als Metadatum gespeichert werden.
