@@ -39,7 +39,7 @@ Nachdem das Plugin vollständig installiert und eingerichtet wurde, wird es übl
 Die Arbeitsweise des Plugins innerhalb des korrekt konfigurierten Workflows sieht folgendermaßen aus:
 
 * Zunächst öffnet das Plugin die METS-Datei des Vorgangs.
-* Für jede logische und physische Element dieser METS-Datei wird ein Handle in der Form `PREFIX-CLIENT-OBJECTID` erzeugt. Ist die geplante `OBJECTID` bereits als Handle vergeben, so wird ein hochzählender Suffix (z.B: `-1`, `-2`, etc.) hinten angefügt.
+* Für jedes logische und physische Element dieser METS-Datei wird ein Handle in der Form `PREFIX-CLIENT-OBJECTID` erzeugt. Ist die geplante `OBJECTID` bereits als Handle vergeben, so wird ein hochzählender Suffix (z.B: `-1`, `-2`, etc.) hinten angefügt.
 * Der generierte Handle wird abschließend innerhalb der METS-Datei bei dem jeweiligen logischen bzw. physischen Strukturelement als Metadatum gespeichert. Hierfür wird üblicherweise der Metadatentyp `_urn` verwendet.
 * Wurde die Registrierung von DOIs aktiviert, wird zusätzlich zur Handle-Generierung für jedes logische top-level Element ein neuer DOI-Identifier erzeugt und innerhalb der METS-Datei gespeichert.
 
@@ -91,7 +91,7 @@ Der Block `<config>` kann für verschiedene Projekte oder Arbeitsschritte wieder
 | `name` | Mit dem Parameter `name` wird der Inhalt des Handles definiert, an den anschließend die Objekt-IDs angehängt werden. Dieser Parameter ist optional. |
 | `separator` | Mit diesem Parameter wird das Trennzeichen definiert, das zwischen den einzelnen Elementen des generierten Handles verwendet werden soll. |
 | `doiGenerate` | Mit diesem Parameter wird festgelegt, ob zusätzlich zu dem Handle auch ein DOI-Identifier erzeugt werden soll. |
-| `doiMapping` | An dieser Stelle wird eine Mapping-Datei benannt, wo die Mappings der Metdaten aus der METS-Datei zu den DOI-Metadaten definiert werden. |
+| `doiMapping` | An dieser Stelle wird eine Mapping-Datei benannt, wo die Mappings der Metadaten aus der METS-Datei zu den DOI-Metadaten definiert werden. |
 
 
 ### Konfiguration für die Nutzung von DOI
@@ -135,7 +135,7 @@ Die Konfiguration der Datei `plugin_intranda_step_epic_pid_mapping.xml` ist folg
 </Mapping>
 ```
 
-In dieser Konfigurationsdatei wird definiert, wie die vorliegenden Metadaten aus der METS-Datei für die Registierung der DOI verwendet werden sollen. Dabei wird für jedes Feld der DOI mindestens ein Metadatum definiert, das verwendet werden soll.
+In dieser Konfigurationsdatei wird definiert, wie die vorliegenden Metadaten aus der METS-Datei für die Registrierung der DOI verwendet werden sollen. Dabei wird für jedes Feld der DOI mindestens ein Metadatum definiert, das verwendet werden soll.
 
 | Wert | Beschreibung |
 | :--- | :--- |
@@ -145,7 +145,7 @@ In dieser Konfigurationsdatei wird definiert, wie die vorliegenden Metadaten aus
 | `default` | Sollten die Metadaten, die mittels `metadata` und `altMetadata` definiert wurden, nicht gefunden werden, kann hier ein default-Wert festgelegt werden. |
 
 
-## Beispiel eines Ergebnises
+## Beispiel eines Ergebnisses
 Wird ein Handle registriert, ergeben sich folgende Inhalte aus der Kommunikation mit dem ePIC Service:
 
 ```bash
